@@ -119,6 +119,8 @@ a product's price later never mutates historical rentals.
 ## Known limitations / next steps
 
 - i18n strings are not yet extracted into locale files (§9) — biggest remaining gap.
+- Account basics are live at `/account` (change email, change password, session
+  management); "my bookings" for customers is pending a user↔customer link.
 - Admin CRM/leads screens are not built yet (booking detail + handover ops are:
   `/admin/bookings/[id]`). Product/device/pricing CRUD UI is built at
   `/admin/inventory`.
