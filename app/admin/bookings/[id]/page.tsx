@@ -9,6 +9,9 @@ import { inArray } from 'drizzle-orm'
 import BookingOps from '@/components/admin/booking-ops'
 import GenerateInvoiceButton from '@/components/admin/generate-invoice-button'
 import AgreementsPanel from '@/components/admin/agreements-panel'
+import IdentityDocumentsPanel from '@/components/admin/identity-documents-panel'
+import { customerDocuments } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 export const metadata: Metadata = { title: 'Booking detail — Go-Sewa Admin' }
 export const dynamic = 'force-dynamic'
@@ -27,6 +30,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   )
   const freeDevices = freeIds.length
     ? await db.select().from(devices).where(inArray(devices.id, freeIds))
+    : []
+
+  // Identity documents (KTP / SIM collateral) attached to the booking's customer.
+  const identityDocs = detail.customer
+    ? await db.select().from(customerDocuments).where(eq(customerDocuments.customerId, detail.customer.id))
     : []
 
   return (
@@ -71,6 +79,13 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         />
 
         <div className="mt-8 grid gap-4 print:hidden">
+          <IdentityDocumentsPanel
+            docs={identityDocs.map((d) => ({
+              id: d.id, kind: d.kind, createdAt: d.createdAt.toISOString(),
+              verified: detail.customer?.idVerified ?? false,
+              customerId: d.customerId,
+            }))}
+          />
           <AgreementsPanel bookingId={detail.booking.id} />
           <GenerateInvoiceButton bookingId={detail.booking.id} />
         </div>

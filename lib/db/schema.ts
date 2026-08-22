@@ -194,6 +194,8 @@ export const availabilityBlocks = pgTable('availability_blocks', {
 // --- Customers / CRM ----------------------------------------------------------
 export const customers = pgTable('customers', {
   id: text('id').primaryKey(),
+  /** Auth account linked to this customer (§54). Null for walk-in / CRM-only customers. */
+  userId: text('user_id').unique(),
   name: text('name').notNull(),
   phone: text('phone'),
   email: text('email'),
@@ -507,6 +509,9 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   delivery_fee_cents: '30000',
   late_fee_cents_per_day: '50000',
   currency: 'IDR',
+  /** Identity document (jaminan) policy — §19, §2528. Types: ktp,sim,passport. */
+  identity_document_required: 'true',
+  identity_document_types: 'ktp,sim,passport',
 }
 
 // --- Ops / audit ---------------------------------------------------------------

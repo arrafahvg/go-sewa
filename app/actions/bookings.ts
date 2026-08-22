@@ -1,8 +1,31 @@
 'use server'
 
 import { createBooking, type BookingChannel } from '@/lib/services/bookings'
-import { requireStaff } from '@/lib/services/auth'
+import { getCurrentUser, requireStaff } from '@/lib/services/auth'
+import { getSetting } from '@/lib/services/settings'
+import { db } from '@/lib/db'
+import { customerDocuments } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
+
+/**
+ * Server-side enforcement of the identity-document-as-collateral policy (§19,
+ * §73): when `identity_document_required` is on, every booking needs a stored
+ * document id that really exists in customer_documents — never trusted from UI.
+ */
+async function assertIdentityDocument(documentId?: string): Promise<string | null> {
+  const required = (await getSetting('identity_document_required')) !== 'false'
+  if (!required) return null
+  if (!documentId) {
+    return 'An identity document photo (KTP or SIM) is required to complete this rental.'
+  }
+  const rows = await db.select({ id: customerDocuments.id })
+    .from(customerDocuments).where(eq(customerDocuments.id, documentId)).limit(1)
+  if (rows.length === 0) {
+    return 'The uploaded identity document could not be verified. Please upload it again.'
+  }
+  return null
+}
 
 /** Public checkout submission. Accepts multi-line carts; runs through the real availability + conflict logic. */
 export async function submitBooking(input: {
@@ -23,8 +46,16 @@ export async function submitBooking(input: {
   deliveryNotes?: string
   deliveryFeeCents?: number
   agreementAccepted?: boolean
+  identityDocumentId?: string
+  customerId?: string
 }) {
+  // Link the booking's customer record to the signed-in account when there is one,
+  // so customers can see their bookings under /account/bookings (§54, §78).
+  const current = await getCurrentUser()
+  const docError = await assertIdentityDocument(input.identityDocumentId)
+  if (docError) return { ok: false as const, error: docError }
   const result = await createBooking({
+    customerId: input.customerId ?? null,
     customerName: input.customerName,
     customerPhone: input.customerPhone || null,
     customerEmail: input.customerEmail || null,
@@ -43,6 +74,7 @@ export async function submitBooking(input: {
     deliveryFeeCents: input.deliveryFeeCents ?? 0,
     channel: 'online',
     agreementAccepted: input.agreementAccepted ?? false,
+    userId: current?.id ?? null,
   })
   return result
 }
@@ -68,10 +100,15 @@ export async function submitAdminBooking(input: {
   discountReason?: string
   channel?: BookingChannel
   notes?: string
+  identityDocumentId?: string
+  customerId?: string
 }) {
   const staff = await requireStaff()
   if (!staff) return { ok: false as const, error: 'You do not have permission to create admin bookings.' }
+  const docError = await assertIdentityDocument(input.identityDocumentId)
+  if (docError) return { ok: false as const, error: docError }
   const result = await createBooking({
+    customerId: input.customerId ?? null,
     customerName: input.customerName,
     customerPhone: input.customerPhone || null,
     customerEmail: input.customerEmail || null,

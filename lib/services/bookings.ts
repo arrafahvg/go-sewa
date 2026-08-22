@@ -13,6 +13,8 @@ export type BookingItemInput = {
 
 export type CreateBookingInput = {
   customerName: string
+  /** Pre-resolved customer id (e.g. identity document upload already created one). */
+  customerId?: string | null
   customerPhone?: string | null
   customerEmail?: string | null
   customerIdNumber?: string | null
@@ -36,6 +38,8 @@ export type CreateBookingInput = {
   notes?: string | null
   agreementAccepted?: boolean
   createdById?: string | null
+  /** Signed-in account placing an online booking — linked to the customer record (§54). */
+  userId?: string | null
 }
 
 export type CreateBookingResult =
@@ -171,21 +175,40 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
 // Determine which physical devices to assign.
     const allChosenDevices = chosenPerItem.flatMap((c) => c.chosen)
 
-    // Customer — reuse by phone/email or create inline.
+    // Customer — reuse by phone/email or create inline. When the booking comes
+    // from a signed-in account, link the customer record to it (§54, §81).
     let customerId: string
+    if (input.customerId) {
+      // Customer was already resolved (identity document upload step) — reuse it.
+      const exists = await client.query(`SELECT id FROM customers WHERE id = $1 LIMIT 1`, [input.customerId])
+      if (exists.rows.length === 0) {
+        await client.query('ROLLBACK')
+        return { ok: false, error: 'Customer record from the document upload could not be found.', reason: 'internal' }
+      }
+      customerId = input.customerId
+    } else {
     const custRes = await client.query(
       `SELECT id FROM customers WHERE lower(phone) = lower($1) OR lower(email) = lower($2) LIMIT 1`,
       [input.customerPhone ?? '', input.customerEmail ?? ''],
     )
     if (custRes.rows.length > 0) {
       customerId = custRes.rows[0].id
+      if (input.userId) {
+        await client.query(
+          `UPDATE customers SET user_id = $1, updated_at = now()
+           WHERE id = $2 AND user_id IS NULL`,
+          [input.userId, customerId],
+        )
+      }
     } else {
       customerId = uid()
       await client.query(
-        `INSERT INTO customers (id, name, phone, email, id_number, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5, now(), now())`,
-        [customerId, input.customerName, input.customerPhone ?? null, input.customerEmail ?? null, input.customerIdNumber ?? null],
+        `INSERT INTO customers (id, name, phone, email, id_number, user_id, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6, now(), now())`,
+        [customerId, input.customerName, input.customerPhone ?? null, input.customerEmail ?? null,
+          input.customerIdNumber ?? null, input.userId ?? null],
       )
+    }
     }
 
     // Booking number: GS-YYYYMMDD-NNN

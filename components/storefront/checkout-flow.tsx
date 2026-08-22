@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Check, Loader2, Trash2 } from 'lucide-react'
 import { loadCart, saveCart, totalRentalDays, type CartLine } from '@/lib/cart'
 import { submitBooking } from '@/app/actions/bookings'
+import IdentityDocumentUpload from '@/components/identity-document-upload'
 import { formatMoney } from '@/lib/utils/money'
 
 type AddOn = { id: string; nameEn: string; centsPerDay: number }
@@ -19,6 +20,7 @@ export default function CheckoutFlow({ addOns, whatsapp = '628123456789' }: { ad
   const [status, setStatus] = useState<'idle' | 'submitting' | 'error' | 'done'>('idle')
   const [error, setError] = useState('')
     const [confirmed, setConfirmed] = useState<{ numbers: string[]; total: number; deposit: number } | null>(null)
+  const [identityDoc, setIdentityDoc] = useState<{ documentId: string; customerId: string } | null>(null)
 
   useEffect(() => { setLines(loadCart()) }, [])
 
@@ -41,6 +43,7 @@ export default function CheckoutFlow({ addOns, whatsapp = '628123456789' }: { ad
 
   const submit = async () => {
     if (!name.trim()) { setError('Please enter your full name.'); return }
+    if (!identityDoc) { setError('Please upload your KTP or driver\'s licence photo — it is required as rental collateral.'); return }
     if (!lines.length) return
     setStatus('submitting')
     setError('')
@@ -63,6 +66,8 @@ export default function CheckoutFlow({ addOns, whatsapp = '628123456789' }: { ad
           startsAt: groupLines[0].startsAt, endsAt: groupLines[0].endsAt,
           fulfillment: 'pickup', returnMethod: 'return_to_location',
           agreementAccepted: agreed,
+          identityDocumentId: identityDoc.documentId,
+          customerId: identityDoc.customerId,
         })
         if (!result.ok) { setStatus('error'); setError(result.error); return }
         numbers.push(result.number)
@@ -144,6 +149,10 @@ if (status === 'done' && confirmed) {
                 <label className="block text-xs font-bold text-[#173b3b]/55">Email (optional)
                   <input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-2 w-full rounded-xl border border-[#173b3b]/12 bg-[#f7f5ef] px-4 py-3 text-sm font-semibold outline-none focus:border-[#e76f51]" placeholder="you@email.com" />
                 </label>
+
+                <div className="border-t border-[#173b3b]/10 pt-4">
+                  <IdentityDocumentUpload customerName={name} customerPhone={phone} onUploaded={setIdentityDoc} />
+                </div>
 
                 <label className="flex items-start gap-3 text-xs text-[#173b3b]/65">
                   <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5" />

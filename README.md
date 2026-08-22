@@ -120,7 +120,9 @@ a product's price later never mutates historical rentals.
 
 - i18n strings are not yet extracted into locale files (§9) — biggest remaining gap.
 - Account basics are live at `/account` (change email, change password, session
-  management); "my bookings" for customers is pending a user↔customer link.
+  management). "My bookings" is live at `/account/bookings`: online checkouts link
+  the booking's customer record to the signed-in account (`customers.user_id`),
+  and existing customers are auto-linked by exact email match on first visit.
 - Admin CRM/leads screens are not built yet (booking detail + handover ops are:
   `/admin/bookings/[id]`). Product/device/pricing CRUD UI is built at
   `/admin/inventory`.
@@ -131,6 +133,12 @@ a product's price later never mutates historical rentals.
   the active template + booking snapshot. Template editing UI is pending.
 - Deposits/late-fees management UI not built (tables + seed data exist); late
   fees and damage charges already flow onto generated invoices.
+- Identity document (KTP/SIM) collateral upload is live: required at online
+  checkout and walk-in creation, stored in a private Supabase Storage bucket
+  (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ID_DOCS_BUCKET`),
+  reviewed via short-lived signed URLs on the admin booking page. Create the
+  private bucket once in the Supabase dashboard. Policy is configurable via
+  settings `identity_document_required` and `identity_document_types`.
 - Storefront search/filter/sort (§10), gallery/specs (§11), delivery form (§15) pending.
 - Booking status automation runs on dashboard load + cron endpoint; a real scheduler
   (e.g. Vercel Cron hitting `/api/cron/overdue`) should be configured in deployment.

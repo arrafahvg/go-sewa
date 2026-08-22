@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/utils/money'
 import type { BookingRow } from '@/lib/data/admin'
 import { adminGetFreeDevices } from '@/app/actions/admin'
 import { submitAdminBooking } from '@/app/actions/bookings'
+import IdentityDocumentUpload from '@/components/identity-document-upload'
 import { todayStr, addDaysStr } from '@/lib/cart'
 
 type Bookings = BookingRow[]
@@ -86,6 +87,7 @@ export function NewRentalForm({ products, customers }: { products: Product[]; cu
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [identityDoc, setIdentityDoc] = useState<{ documentId: string; customerId: string } | null>(null)
 
   const check = async () => {
     if (!productId || start >= end) { setError('Choose a product and valid dates.'); return }
@@ -102,12 +104,15 @@ export function NewRentalForm({ products, customers }: { products: Product[]; cu
 
   const submit = async () => {
     if (!name.trim() || !productId) { setError('Enter the customer name and choose a product.'); return }
+    if (!identityDoc) { setError("Upload the customer's KTP or SIM photo — required as collateral."); return }
     setBusy(true); setError('')
     const chosen = selected.length ? selected : free.slice(0, quantity).map((d) => d.id)
     const result = await submitAdminBooking({
       customerName: name.trim(), customerPhone: phone.trim(), productId,
       startsAt: start, endsAt: end, quantity, preferredDeviceIds: chosen,
       channel, notes: `Walk-in created on ${todayStr()}`,
+      identityDocumentId: identityDoc.documentId,
+      customerId: identityDoc.customerId,
     })
     setBusy(false)
     if (result.ok) {
@@ -145,6 +150,10 @@ export function NewRentalForm({ products, customers }: { products: Product[]; cu
             {products.map((p) => <option key={p.id} value={p.id}>{p.name} · {formatMoney(p.dailyCents)}/day · dep {formatMoney(p.depositCents)}</option>)}
           </select>
         </label>
+
+        <div className="border-t border-[#173b3b]/10 pt-4">
+          <IdentityDocumentUpload customerName={name} customerPhone={phone} onUploaded={setIdentityDoc} />
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="block text-xs font-bold text-[#173b3b]/60">Start
