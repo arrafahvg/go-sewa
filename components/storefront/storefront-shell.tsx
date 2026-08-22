@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Menu, MessageCircle, ShoppingBag, X } from 'lucide-react'
+import { Menu, MessageCircle, ShoppingBag, User, X } from 'lucide-react'
 import { loadCart, cartCount } from '@/lib/cart'
 
 const NAV = [
@@ -44,6 +44,13 @@ export default function StorefrontShell({ children, whatsapp = '628123456789' }:
           </nav>
           <div className="flex items-center gap-3">
             <Link
+              href="/account"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-[#173b3b]/10 bg-white transition hover:bg-[#e4eee8]"
+              aria-label="My account"
+            >
+              <User size={18} />
+            </Link>
+            <Link
               href="/checkout"
               className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[#173b3b]/10 bg-white transition hover:bg-[#e4eee8]"
               aria-label="Rental cart"
@@ -76,6 +83,9 @@ export default function StorefrontShell({ children, whatsapp = '628123456789' }:
                 {n.label}
               </Link>
             ))}
+            <Link href="/account" onClick={() => setMenuOpen(false)} className="text-sm font-semibold text-[#173b3b]/80">
+              My account
+            </Link>
           </nav>
         )}
       </header>
