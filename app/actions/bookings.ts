@@ -1,25 +1,16 @@
 'use server'
 
-import { auth } from '@/lib/auth'
 import { createBooking, type BookingChannel } from '@/lib/services/bookings'
-import { headers } from 'next/headers'
+import { requireStaff } from '@/lib/services/auth'
 import { revalidatePath } from 'next/cache'
 
-async function getOptionalUserId(): Promise<string | null> {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() })
-    return session?.user?.id ?? null
-  } catch {
-    return null
-  }
-}
-
-/** Public checkout submission. Runs through the real availability + conflict logic. */
+/** Public checkout submission. Accepts multi-line carts; runs through the real availability + conflict logic. */
 export async function submitBooking(input: {
   customerName: string
   customerPhone?: string
   customerEmail?: string
-  productId: string
+  productId?: string
+  items?: { productId: string; quantity?: number; addOnIds?: string[] }[]
   startsAt: string
   endsAt: string
   quantity?: number
@@ -38,6 +29,7 @@ export async function submitBooking(input: {
     customerPhone: input.customerPhone || null,
     customerEmail: input.customerEmail || null,
     productId: input.productId,
+    items: input.items,
     startsAt: new Date(input.startsAt),
     endsAt: new Date(input.endsAt),
     quantity: input.quantity ?? 1,
@@ -55,7 +47,7 @@ export async function submitBooking(input: {
   return result
 }
 
-/** Admin walk-in / phone / whatsapp booking (spec §19B) — same service, only channel differs. */
+/** Admin walk-in / phone / whatsapp booking (spec §19B) — staff-only, same service, only channel differs. */
 export async function submitAdminBooking(input: {
   customerName: string
   customerPhone?: string
@@ -77,7 +69,8 @@ export async function submitAdminBooking(input: {
   channel?: BookingChannel
   notes?: string
 }) {
-  const staffId = await getOptionalUserId()
+  const staff = await requireStaff()
+  if (!staff) return { ok: false as const, error: 'You do not have permission to create admin bookings.' }
   const result = await createBooking({
     customerName: input.customerName,
     customerPhone: input.customerPhone || null,
@@ -98,7 +91,7 @@ export async function submitAdminBooking(input: {
     discountReason: input.discountReason ?? null,
     channel: input.channel ?? 'in_store',
     notes: input.notes ?? null,
-    createdById: staffId,
+    createdById: staff.id,
   })
   revalidatePath('/admin')
   return result

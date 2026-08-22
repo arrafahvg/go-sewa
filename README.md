@@ -21,7 +21,7 @@ admin operations console.
 npm install
 cp .env.example .env.local   # fill in DATABASE_URL + BETTER_AUTH_SECRET
 
-# create the schema from lib/db/schema.ts
+# create / update the schema from lib/db/schema.ts
 npx drizzle-kit push         # or: npm run db:push
 
 # load realistic Indonesian demo data
@@ -29,6 +29,23 @@ npm run db:seed
 
 npm run dev
 ```
+
+### Admin access (RBAC, §54)
+
+New sign-ups default to role `customer` and cannot open `/admin`. Promote yourself
+after signing up:
+
+```sql
+UPDATE "user" SET role = 'owner' WHERE email = 'you@example.com';
+```
+
+Roles: `owner` (full), `admin`, `staff` (bookings/handover), `customer` (storefront only).
+
+### Overdue automation (§17)
+
+`GET /api/cron/overdue` flags passed-due rentals as overdue (and their units).
+Protect it by setting `CRON_SECRET` and calling with `Authorization: Bearer <secret>`.
+The admin dashboard also runs the sweep on load so staff always sees current state.
 
 ### Environment variables
 
@@ -101,14 +118,14 @@ a product's price later never mutates historical rentals.
 
 ## Known limitations / next steps
 
-- Cart currently submits one product per booking (multi-line cart checkout is a
-  natural next step on top of the same service).
-- Admin CRM/leads screens and product/device CRUD UI are not built yet
-  (booking detail + handover ops are: `/admin/bookings/[id]`).
+- i18n strings are not yet extracted into locale files (§9) — biggest remaining gap.
+- Admin CRM/leads screens are not built yet (booking detail + handover ops are:
+  `/admin/bookings/[id]`). Product/device/pricing CRUD UI is built at
+  `/admin/inventory`.
 - Invoices/agreements are seeded records; generation UI + PDF is not built.
-- i18n strings are not yet extracted into locale files (§9).
-- No RBAC yet — `/admin` is not protected (§54).
-- Booking status automation (active → overdue) is a guarded manual transition,
-  not a scheduled job yet (§17).
+- Deposits/late-fees management UI not built (tables + seed data exist).
+- Storefront search/filter/sort (§10), gallery/specs (§11), delivery form (§15) pending.
+- Booking status automation runs on dashboard load + cron endpoint; a real scheduler
+  (e.g. Vercel Cron hitting `/api/cron/overdue`) should be configured in deployment.
 - No automated tests yet — the availability/pricing engines are pure enough to
   unit test first.

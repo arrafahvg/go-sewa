@@ -18,7 +18,7 @@ export default function CheckoutFlow({ addOns, whatsapp = '628123456789' }: { ad
   const [agreed, setAgreed] = useState(false)
   const [status, setStatus] = useState<'idle' | 'submitting' | 'error' | 'done'>('idle')
   const [error, setError] = useState('')
-  const [confirmed, setConfirmed] = useState<{ number: string; total: number; deposit: number } | null>(null)
+    const [confirmed, setConfirmed] = useState<{ numbers: string[]; total: number; deposit: number } | null>(null)
 
   useEffect(() => { setLines(loadCart()) }, [])
 
@@ -45,20 +45,34 @@ export default function CheckoutFlow({ addOns, whatsapp = '628123456789' }: { ad
     setStatus('submitting')
     setError('')
     try {
-      const first = lines[0]
-      const result = await submitBooking({
-        customerName: name.trim(), customerPhone: phone.trim(), customerEmail: email.trim(),
-        productId: first.productId, startsAt: first.startsAt, endsAt: first.endsAt,
-        quantity: first.quantity, fulfillment: 'pickup', returnMethod: 'return_to_location',
-        agreementAccepted: agreed,
-      })
-      if (result.ok) {
-        setConfirmed({ number: result.number, total: first.dailyCents * totalRentalDays(first.startsAt, first.endsAt) * first.quantity, deposit: first.depositCents * first.quantity })
-        setStatus('done')
-        saveCart(lines.filter((l) => l.id !== first.id))
-      } else {
-        setStatus('error'); setError(result.error)
+      // Group cart lines by rental period — each period becomes one booking (§64).
+      const groups = new Map<string, CartLine[]>()
+      for (const l of lines) {
+        const key = `${l.startsAt}|${l.endsAt}`
+        groups.set(key, [...(groups.get(key) ?? []), l])
       }
+
+      const numbers: string[] = []
+      let total = 0
+      let depositTotal = 0
+      const consumed: string[] = []
+      for (const [, groupLines] of groups) {
+        const result = await submitBooking({
+          customerName: name.trim(), customerPhone: phone.trim(), customerEmail: email.trim(),
+          items: groupLines.map((l) => ({ productId: l.productId, quantity: l.quantity, addOnIds: l.addOnIds })),
+          startsAt: groupLines[0].startsAt, endsAt: groupLines[0].endsAt,
+          fulfillment: 'pickup', returnMethod: 'return_to_location',
+          agreementAccepted: agreed,
+        })
+        if (!result.ok) { setStatus('error'); setError(result.error); return }
+        numbers.push(result.number)
+        total += groupLines.reduce((s, l) => s + l.dailyCents * totalRentalDays(l.startsAt, l.endsAt) * l.quantity, 0)
+        depositTotal += groupLines.reduce((s, l) => s + l.depositCents * l.quantity, 0)
+        consumed.push(...groupLines.map((l) => l.id))
+      }
+      setConfirmed({ numbers, total, deposit: depositTotal })
+      setStatus('done')
+      saveCart(lines.filter((l) => !consumed.includes(l.id)))
     } catch {
       setStatus('error'); setError('Unable to complete your booking. Please try again.')
     }
@@ -72,13 +86,13 @@ if (status === 'done' && confirmed) {
         <p className="mt-3 text-sm text-[#173b3b]/60">Thank you! Your rental booking has been received. We&apos;ll contact you via WhatsApp to confirm.</p>
         <div className="mx-auto mt-8 max-w-sm rounded-2xl border border-[#173b3b]/10 bg-white p-6 text-left">
           <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/50">Booking number</p>
-          <p className="mt-1 font-mono text-xl font-bold">{confirmed.number}</p>
+          <p className="mt-1 font-mono text-xl font-bold">{confirmed.numbers.join(', ')}</p>
           <div className="mt-4 space-y-2 border-t border-[#173b3b]/10 pt-4 text-sm">
             <div className="flex justify-between"><span className="text-[#173b3b]/60">Rental fee</span><strong>{formatMoney(confirmed.total)}</strong></div>
             <div className="flex justify-between"><span className="text-[#173b3b]/60">Deposit</span><strong>{formatMoney(confirmed.deposit)}</strong></div>
             <div className="flex justify-between border-t border-[#173b3b]/10 pt-2"><span className="font-bold">Total due</span><span className="font-bold">{formatMoney(confirmed.total + confirmed.deposit)}</span></div>
           </div>
-          <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hi Go-Sewa, I'd like to ask about booking ${confirmed.number}.`)}`} target="_blank" rel="noreferrer" className="mt-6 block rounded-full bg-[#25D366] py-3 text-center text-sm font-bold text-white">Contact Go-Sewa on WhatsApp</a>
+<a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hi Go-Sewa, I'd like to ask about booking ${confirmed.numbers.join(', ')}.`)}`} target="_blank" rel="noreferrer" className="mt-6 block rounded-full bg-[#25D366] py-3 text-center text-sm font-bold text-white">Contact Go-Sewa on WhatsApp</a>
         </div>
         <button onClick={() => router.push('/rent')} className="mt-6 text-sm font-bold text-[#387066] underline-offset-4 hover:underline">Browse more devices</button>
       </div>

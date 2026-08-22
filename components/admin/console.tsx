@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { CalendarDays, Plus, Users, LayoutDashboard } from 'lucide-react'
 import { formatMoney } from '@/lib/utils/money'
@@ -25,7 +26,10 @@ export default function AdminConsole({ bookings, customers, products }: { bookin
       <header className="border-b border-[#173b3b]/10 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <p className="font-serif text-xl font-bold">go<span className="text-[#e76f51]">—</span>sewa <span className="ml-1 text-sm font-normal text-[#173b3b]/50">/ admin</span></p>
-          <a href="/" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">View storefront</a>
+          <nav className="flex items-center gap-3">
+            <Link href="/admin/inventory" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Inventory</Link>
+            <a href="/" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">View storefront</a>
+          </nav>
         </div>
       </header>
 

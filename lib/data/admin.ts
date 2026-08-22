@@ -1,6 +1,6 @@
 import { desc } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { bookings, customers, bookingItems, bookingDeviceAllocations } from '@/lib/db/schema'
+import { bookings, customers, bookingItems, bookingDeviceAllocations, devices } from '@/lib/db/schema'
 import { getCatalogProducts } from '@/lib/data/catalog'
 
 export async function getBookingsWithDetail() {
@@ -43,4 +43,9 @@ export async function getCustomers() {
   return db.select().from(customers).orderBy(desc(customers.createdAt))
 }
 
+
+export async function getAdminDevices() {
+  return db.select().from(devices).orderBy(devices.assetCode)
+}
+export type AdminDevice = Awaited<ReturnType<typeof getAdminDevices>>[number]
 export { getCatalogProducts }

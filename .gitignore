@@ -27,3 +27,8 @@ yarn-error.log*
 next-env.d.ts
 .vercel
 .env*
+
+# local dev artifacts
+dev.log
+db-check.js
+promote-owner.js

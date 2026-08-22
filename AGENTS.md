@@ -118,11 +118,11 @@ npm run build        # production build (must pass before finishing)
 
 | Phase | Scope | Status |
 | --- | --- | --- |
-| 1 | Foundation: schema, auth, settings | ✅ done (RBAC §54 pending) |
+| 1 | Foundation: schema, auth, settings | ✅ done — incl. RBAC §54 (roles: owner/admin/staff/customer) |
 | 2 | Products + physical devices + pricing rules | ✅ schema/services done; admin CRUD UI pending |
 | 3 | Availability engine + conflict prevention | ✅ done |
 | 4 | Storefront: home / rent / detail / cart | ✅ core done (search/filter/sort pending §10) |
-| 5 | Checkout + confirmation + WhatsApp | ✅ core done (delivery fields pending §15) |
+| 5 | Checkout + confirmation + WhatsApp | ✅ done — multi-line cart checkout, confirmation, WhatsApp (delivery fields pending §15) |
 | 6 | Admin CRM + check-out/check-in/inspection | 🟡 mostly done — walk-in form, booking detail, device assignment, check-out/in, inspection done; CRM/leads UI pending |
 | 7–9 | Invoices, agreements, maintenance ops | ⏳ schema + seed only; no UI yet |
 | 10 | CMS admin | ⏳ schema + seed only |

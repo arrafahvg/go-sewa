@@ -4,12 +4,20 @@ import { logActivity, uid } from './audit'
 
 export type BookingChannel = 'online' | 'in_store' | 'phone' | 'whatsapp'
 
+export type BookingItemInput = {
+  productId: string
+  quantity?: number
+  preferredDeviceIds?: string[]   // exact physical devices (walk-in flow)
+  addOnIds?: string[]
+}
+
 export type CreateBookingInput = {
   customerName: string
   customerPhone?: string | null
   customerEmail?: string | null
   customerIdNumber?: string | null
-  productId: string
+  productId?: string               // single-item form; ignored when `items` is provided
+  items?: BookingItemInput[]       // multi-line cart form (one booking, many products)
   startsAt: Date
   endsAt: Date
   quantity?: number
@@ -58,28 +66,44 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     return { ok: false, error: 'Rental end must be after the start date.', reason: 'invalid_dates' }
   }
 
-  const quantity = input.quantity ?? 1
-  if (quantity < 1) return { ok: false, error: 'Quantity must be at least 1.', reason: 'invalid_dates' }
+  const resolvedItems: { productId: string; quantity: number; preferredDeviceIds: string[]; addOnIds: string[] }[] = (input.items?.length
+    ? input.items
+    : [{ productId: input.productId ?? '', quantity: input.quantity ?? 1,
+         preferredDeviceIds: input.preferredDeviceIds, addOnIds: input.addOnIds }]
+  ).map((it) => ({
+    productId: it.productId,
+    quantity: it.quantity ?? 1,
+    preferredDeviceIds: it.preferredDeviceIds ?? [],
+    addOnIds: it.addOnIds ?? [],
+  }))
+  if (resolvedItems.some((it) => !it.productId)) {
+    return { ok: false, error: 'Every cart line needs a product.', reason: 'invalid_dates' }
+  }
+  const totalQuantity = resolvedItems.reduce((s, it) => s + it.quantity, 0)
+  if (totalQuantity < 1) return { ok: false, error: 'Quantity must be at least 1.', reason: 'invalid_dates' }
 
-  const quote = await quoteBooking(input.productId, start, end, {
-    quantity,
-    addOnIds: input.addOnIds ?? [],
+  // Per-item pricing snapshots; delivery fee / discount apply once at booking level.
+  const itemQuotes = []
+  for (const it of resolvedItems) {
+    itemQuotes.push(await quoteBooking(it.productId, start, end, {
+      quantity: it.quantity, addOnIds: it.addOnIds, deliveryFeeCents: 0, discountCents: 0,
+    }))
+  }
+  const rentalSubtotalCents = itemQuotes.reduce((s, q) => s + q.rentalSubtotalCents, 0)
+  const depositTotalCents = itemQuotes.reduce((s, q) => s + q.depositCents, 0)
+  const quote = {
     deliveryFeeCents: input.deliveryFeeCents ?? 0,
     discountCents: input.discountCents ?? 0,
-  })
+    rentalSubtotalCents,
+    depositCents: depositTotalCents,
+    totalCents: Math.max(0, rentalSubtotalCents + (input.deliveryFeeCents ?? 0) - (input.discountCents ?? 0)),
+  }
 
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
 
-    // Lock every physical unit of this product so concurrent bookings serialize.
-    const devicesResult = await client.query(
-      `SELECT id, status FROM devices WHERE product_id = $1 AND active = true FOR UPDATE`,
-      [input.productId],
-    )
-    const allDeviceIds: string[] = devicesResult.rows.map((r: { id: string }) => r.id)
-
-    // Load overlapping active bookings (same conflict rule as the public engine).
+    // Load overlapping active bookings + manual blocks ONCE for the range (§6).
     const overlap = await client.query(
       `SELECT b.id FROM bookings b
        WHERE b.starts_at < $1 AND b.ends_at > $2
@@ -100,37 +124,52 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       allocated.push(...alloc.rows.map((r: { device_id: string }) => r.device_id))
     }
 
-    // Manual availability blocks intersecting the range.
     const blocks = await client.query(
       `SELECT device_id FROM availability_blocks WHERE starts_on < $1 AND ends_on > $2`,
       [end, start],
     )
     const blockedIds = new Set<string>(blocks.rows.map((r: { device_id: string }) => r.device_id))
-
     const unavailableStatuses = new Set(['maintenance', 'damaged', 'lost', 'retired', 'blocked'])
-    const taken = new Set(allocated)
-    const freeDeviceIds = allDeviceIds
-      .filter((id) => !taken.has(id))
-      .filter((id) => !blockedIds.has(id))
-      .filter((id) => !unavailableStatuses.has(
-        devicesResult.rows.find((r: { id: string }) => r.id === id)?.status,
-      ))
-// Determine which physical devices to assign.
-    const preferred = [...new Set((input.preferredDeviceIds ?? []).filter((d) => freeDeviceIds.includes(d)))]
-    const chosen: string[] = []
-    if (preferred.length >= quantity) {
-      chosen.push(...preferred.slice(0, quantity))
-    } else {
-      chosen.push(...preferred)
-      for (const id of freeDeviceIds) {
-        if (chosen.length >= quantity) break
-        if (!chosen.includes(id)) chosen.push(id)
+
+    // Devices chosen earlier in THIS booking must not be reused either.
+    const globallyTaken = new Set<string>(allocated)
+
+    // Pick concrete free units per item, locking each product's units (§6).
+    const chosenPerItem: { item: BookingItemInput; chosen: string[] }[] = []
+    for (const it of resolvedItems) {
+      const devicesResult = await client.query(
+        `SELECT id, status FROM devices WHERE product_id = $1 AND active = true FOR UPDATE`,
+        [it.productId],
+      )
+      const allDeviceIds: string[] = devicesResult.rows.map((r: { id: string }) => r.id)
+      const freeDeviceIds = allDeviceIds
+        .filter((id) => !globallyTaken.has(id))
+        .filter((id) => !blockedIds.has(id))
+        .filter((id) => !unavailableStatuses.has(
+          devicesResult.rows.find((r: { id: string }) => r.id === id)?.status,
+        ))
+
+      const preferred = [...new Set(it.preferredDeviceIds.filter((d) => freeDeviceIds.includes(d)))]
+      const chosen: string[] = []
+      if (preferred.length >= it.quantity) {
+        chosen.push(...preferred.slice(0, it.quantity))
+      } else {
+        chosen.push(...preferred)
+        for (const id of freeDeviceIds) {
+          if (chosen.length >= it.quantity) break
+          if (!chosen.includes(id)) chosen.push(id)
+        }
       }
+      if (chosen.length < it.quantity) {
+        await client.query('ROLLBACK')
+        return { ok: false, error: 'Not enough devices available for the selected dates.', reason: 'no_availability' }
+      }
+      chosenPerItem.push({ item: it, chosen })
+      for (const id of chosen) globallyTaken.add(id)
     }
-    if (chosen.length < quantity) {
-      await client.query('ROLLBACK')
-      return { ok: false, error: 'Not enough devices available for the selected dates.', reason: 'no_availability' }
-    }
+
+// Determine which physical devices to assign.
+    const allChosenDevices = chosenPerItem.flatMap((c) => c.chosen)
 
     // Customer — reuse by phone/email or create inline.
     let customerId: string
@@ -177,17 +216,21 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
         input.createdById ?? null],
     )
 
-    // Pricing snapshot for each unit (spec §58).
-    await client.query(
-      `INSERT INTO booking_items (id, booking_id, product_id, quantity, unit_price_cents,
-        price_rule_kind, price_rule_label, add_on_cents, line_total_cents, product_name_snapshot)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [uid(), bookingId, input.productId, quantity, quote.unitPriceCents,
-        quote.ruleKind, quote.ruleLabel, quote.addOnCents, quote.lineTotalCents, quote.productName],
-    )
+    // Pricing snapshot per item — historical accuracy (spec §58).
+    for (let i = 0; i < chosenPerItem.length; i++) {
+      const { item } = chosenPerItem[i]
+      const q = itemQuotes[i]
+      await client.query(
+        `INSERT INTO booking_items (id, booking_id, product_id, quantity, unit_price_cents,
+          price_rule_kind, price_rule_label, add_on_cents, line_total_cents, product_name_snapshot)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [uid(), bookingId, item.productId, item.quantity, q.unitPriceCents,
+          q.ruleKind, q.ruleLabel, q.addOnCents, q.lineTotalCents, q.productName],
+      )
+    }
 
-    // Reserve the chosen physical devices (spec §22) — mark reserved + track allocation.
-    for (const deviceId of chosen) {
+    // Reserve every chosen physical device (spec §22) — reserved + allocation tracked.
+    for (const deviceId of allChosenDevices) {
       await client.query(
         `INSERT INTO booking_device_allocations (id, booking_id, device_id, assigned_by_id, assigned_at)
          VALUES ($1,$2,$3,$4, now())`,
