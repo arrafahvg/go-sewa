@@ -124,8 +124,13 @@ a product's price later never mutates historical rentals.
 - Admin CRM/leads screens are not built yet (booking detail + handover ops are:
   `/admin/bookings/[id]`). Product/device/pricing CRUD UI is built at
   `/admin/inventory`.
-- Invoices/agreements are seeded records; generation UI + PDF is not built.
-- Deposits/late-fees management UI not built (tables + seed data exist).
+- Invoice generation is live: booking detail → "Generate invoice", printable
+  document at `/admin/invoices/[id]` (print-to-PDF), list at `/admin/invoices`.
+- Rental agreement generation is live: booking detail → "Generate agreement",
+  printable/signature-ready document at `/admin/agreements/[id]`, merged from
+  the active template + booking snapshot. Template editing UI is pending.
+- Deposits/late-fees management UI not built (tables + seed data exist); late
+  fees and damage charges already flow onto generated invoices.
 - Storefront search/filter/sort (§10), gallery/specs (§11), delivery form (§15) pending.
 - Booking status automation runs on dashboard load + cron endpoint; a real scheduler
   (e.g. Vercel Cron hitting `/api/cron/overdue`) should be configured in deployment.

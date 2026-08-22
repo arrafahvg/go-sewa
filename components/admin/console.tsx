@@ -28,6 +28,7 @@ export default function AdminConsole({ bookings, customers, products }: { bookin
           <p className="font-serif text-xl font-bold">go<span className="text-[#e76f51]">—</span>sewa <span className="ml-1 text-sm font-normal text-[#173b3b]/50">/ admin</span></p>
           <nav className="flex items-center gap-3">
             <Link href="/admin/inventory" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Inventory</Link>
+            <Link href="/admin/invoices" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Invoices</Link>
             <a href="/" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">View storefront</a>
           </nav>
         </div>

@@ -7,6 +7,8 @@ import { db } from '@/lib/db'
 import { devices } from '@/lib/db/schema'
 import { inArray } from 'drizzle-orm'
 import BookingOps from '@/components/admin/booking-ops'
+import GenerateInvoiceButton from '@/components/admin/generate-invoice-button'
+import AgreementsPanel from '@/components/admin/agreements-panel'
 
 export const metadata: Metadata = { title: 'Booking detail — Go-Sewa Admin' }
 export const dynamic = 'force-dynamic'
@@ -67,6 +69,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           checkins={detail.checkins.map((c) => ({ condition: c.condition, damageNoted: c.damageNoted, at: c.checkedInAt.toISOString() }))}
           freeDevices={freeDevices.map((d) => ({ id: d.id, assetCode: d.assetCode }))}
         />
+
+        <div className="mt-8 grid gap-4 print:hidden">
+          <AgreementsPanel bookingId={detail.booking.id} />
+          <GenerateInvoiceButton bookingId={detail.booking.id} />
+        </div>
       </main>
     </div>
   )
