@@ -1,0 +1,155 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { CalendarDays, Check, Loader2, MessageCircle, ShoppingBag } from 'lucide-react'
+import { checkProductAvailability } from '@/app/actions/availability'
+import { loadCart, saveCart, addDaysStr, todayStr, totalRentalDays, type CartLine } from '@/lib/cart'
+import { formatMoney } from '@/lib/utils/money'
+import type { CatalogProduct } from '@/lib/data/catalog'
+
+type AddOn = { id: string; nameEn: string; nameId: string; centsPerDay: number; centsPerRental: number }
+
+export default function ProductDetail({ product, addOns, whatsapp = '628123456789' }: { product: CatalogProduct; addOns: AddOn[]; whatsapp?: string }) {
+  const router = useRouter()
+  const [start, setStart] = useState(todayStr())
+  const [end, setEnd] = useState(addDaysStr(3))
+  const [quantity, setQuantity] = useState(1)
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([])
+  const [state, setState] = useState<{ phase: 'idle' | 'loading' | 'ok' | 'error'; message?: string; available?: number; total?: number; quote?: any }>({ phase: 'idle' })
+
+  useEffect(() => {
+    let cancelled = false
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await checkProductAvailability({ productId: product.id, startsAt: start, endsAt: end, quantity, addOnIds: selectedAddOns, deliveryFeeCents: 0 })
+        if (cancelled) return
+        if (res.error) setState({ phase: 'error', message: res.error })
+        else if (res.availability?.unavailable) setState({ phase: 'error', message: 'Not available for your selected dates. Choose different dates.' })
+        else if (res.availability && res.quote) setState({ phase: 'ok', available: res.availability.available, total: res.availability.total, quote: res.quote })
+      } catch {
+        if (!cancelled) setState({ phase: 'error', message: 'Unable to check availability. Please try again.' })
+      }
+    }, 60)
+    return () => { cancelled = true; window.clearTimeout(timer) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [start, end, quantity, selectedAddOns, product.id])
+
+  const days = start < end ? totalRentalDays(start, end) : 0
+  const quote = state.quote
+  const availabilityCopy = state.phase === 'loading' ? undefined
+    : state.phase === 'ok' ? (state.available === 1 ? 'Only 1 device left for your selected dates' : 'Available for your selected dates')
+    : state.phase === 'error' ? state.message : 'Select your rental dates to check availability.'
+
+  const toggleAddOn = (id: string) => setSelectedAddOns((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id])
+  const addToCart = () => {
+    const line: CartLine = { id: `${product.id}-${Date.now()}`, productId: product.id, slug: product.slug, name: product.name, imageUrl: product.imageUrl, dailyCents: product.dailyCents, depositCents: product.depositCents, quantity, startsAt: start, endsAt: end, addOnIds: selectedAddOns }
+    saveCart([...loadCart(), line])
+    window.dispatchEvent(new Event('storefront-cart'))
+  }
+  const rentNow = () => { addToCart(); router.push('/checkout') }
+
+  return (
+    <div className="mx-auto max-w-7xl px-5 pb-24 pt-8 lg:px-8">
+      <div className="grid gap-10 lg:grid-cols-2">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-[#e4eee8]">
+          {product.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center font-serif text-3xl font-bold text-[#173b3b]/30">{product.name}</div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{product.categoryNameEn}</p>
+            <h1 className="mt-2 font-serif text-4xl tracking-tight">{product.name}</h1>
+            <p className="mt-3 text-sm leading-6 text-[#173b3b]/60">{product.description}</p>
+          </div>
+
+          <div className="flex items-end gap-6">
+            <div>
+              <p className="text-3xl font-bold">{formatMoney(product.dailyCents)}</p>
+              <p className="text-xs text-[#173b3b]/50">per day</p>
+            </div>
+            {product.depositCents > 0 && (
+              <div>
+                <p className="text-lg font-bold text-[#173b3b]/70">{formatMoney(product.depositCents)}</p>
+                <p className="text-xs text-[#173b3b]/50">refundable deposit</p>
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="rounded-2xl border border-[#173b3b]/15 bg-white p-4 text-xs font-bold">Rental start
+              <input type="date" min={todayStr()} value={start} onChange={(e) => setStart(e.target.value)} className="mt-2 block w-full bg-transparent text-sm font-semibold outline-none" />
+            </label>
+            <label className="rounded-2xl border border-[#173b3b]/15 bg-white p-4 text-xs font-bold">Return date
+              <input type="date" min={start} value={end} onChange={(e) => setEnd(e.target.value)} className="mt-2 block w-full bg-transparent text-sm font-semibold outline-none" />
+            </label>
+          </div>
+          <p className="flex items-center gap-2 text-xs text-[#173b3b]/55"><CalendarDays size={14} /> {days} rental days</p>
+
+          <div className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${state.phase === 'ok' ? 'border-[#8bc0a8] bg-[#e4eee8] text-[#27604a]' : state.phase === 'error' ? 'border-[#e8a09a] bg-[#f5d9d3] text-[#a43d2b]' : 'border-[#173b3b]/15 bg-white text-[#173b3b]/55'}`}>
+            <div className="flex items-center gap-2">
+              {state.phase === 'loading' && <Loader2 size={15} className="animate-spin" />}
+              {state.phase === 'ok' && <Check size={15} />}
+              {availabilityCopy}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-[#173b3b]/55">Quantity</span>
+            <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="h-8 w-8 rounded-full border" aria-label="Decrease quantity">−</button>
+            <strong>{quantity}</strong>
+            <button onClick={() => setQuantity((q) => q + 1)} className="h-8 w-8 rounded-full border" aria-label="Increase quantity">+</button>
+          </div>
+
+          {addOns.length > 0 && (
+            <div>
+              <p className="text-xs font-bold text-[#173b3b]/55">Optional add-ons</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {addOns.map((a) => (
+                  <button key={a.id} onClick={() => toggleAddOn(a.id)} className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${selectedAddOns.includes(a.id) ? 'border-[#173b3b] bg-[#173b3b] text-white' : 'border-[#173b3b]/15 bg-white text-[#173b3b]/70'}`}>
+                    {a.nameEn} · {formatMoney(a.centsPerDay)}/day
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {quote && (
+            <div className="rounded-2xl border border-[#173b3b]/10 bg-white p-5 text-sm">
+              <div className="flex justify-between border-b border-[#173b3b]/10 pb-2">
+                <span className="text-[#173b3b]/60">Rental fee ({days}d × {quantity})</span>
+                <strong>{formatMoney(quote.lineTotalCents * quantity)}</strong>
+              </div>
+              <div className="mt-2 flex justify-between pb-3">
+                <span className="text-[#173b3b]/60">Deposit</span>
+                <strong>{formatMoney(quote.depositCents)}</strong>
+              </div>
+              <div className="flex items-center justify-between border-t border-[#173b3b]/10 pt-3">
+                <span className="font-bold">Total due before rental</span>
+                <span className="font-serif text-lg font-bold">{formatMoney(quote.totalDueCents)}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button onClick={rentNow} disabled={state.phase !== 'ok'} className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#173b3b] px-6 py-4 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">
+              <ShoppingBag size={18} /> Rent now
+            </button>
+            <button onClick={addToCart} disabled={state.phase !== 'ok'} className="flex flex-1 items-center justify-center gap-2 rounded-full border border-[#173b3b]/15 bg-white px-6 py-4 text-sm font-bold transition hover:bg-[#e4eee8] disabled:cursor-not-allowed disabled:opacity-40">
+              Add to cart
+            </button>
+          </div>
+
+          <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hi Go-Sewa, I'm interested in renting the ${product.name}.`)}`} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 text-sm font-semibold text-[#387066] underline-offset-4 hover:underline">
+            <MessageCircle size={16} /> Need help choosing? Chat on WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
