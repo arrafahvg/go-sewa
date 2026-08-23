@@ -45,11 +45,11 @@ export async function seed(): Promise<void> {
   }
 
   // --- Products + daily pricing rules -------------------------------------------
-  const prod = async (slug: string, name: string, category: string, deposit: number, perDay: number, desc: string) => {
+  const prod = async (slug: string, name: string, category: string, deposit: number, perDay: number, desc: string, depositRequired = false) => {
     const id = uid()
     await db.insert(products).values({
       id, slug, categoryId: categorySlugToId[category], name, description: desc,
-      depositCents: deposit, defaultFulfillment: 'pickup', imageUrl: '', gallery: [],
+      depositCents: deposit, depositRequired, defaultFulfillment: 'pickup', imageUrl: '', gallery: [],
       specs: {}, active: true, createdAt: now(), updatedAt: now(),
     })
     await db.insert(rentalPricingRules).values({
@@ -60,7 +60,7 @@ export async function seed(): Promise<void> {
   }
 
   const iphone15 = await prod('iphone-15-pro', 'iPhone 15 Pro', 'smartphones', 1_500_000, 150_000,
-    'Flagship dengan kamera pro dan titanium.')
+    'Flagship dengan kamera pro dan titanium.', true)
   const iphone13 = await prod('iphone-13', 'iPhone 13', 'smartphones', 1_000_000, 100_000,
     'Smartphone premium yang seimbang untuk kamera dan performa.')
   const samsung = await prod('samsung-galaxy-s24', 'Samsung Galaxy S24', 'smartphones', 1_200_000, 130_000,
@@ -285,6 +285,9 @@ export async function seed(): Promise<void> {
   await db.insert(faq).values({ id: uid(), questionId: 'q2', questionEn: 'Is a deposit required?', answerId: 'a2', answerEn: 'Yes, refundable after the device is returned in good condition.' })
   await db.insert(testimonials).values({ id: uid(), name: 'Maya', rating: 5, quoteId: 't1', quoteEn: 'Smooth, reliable, premium gear.' })
   await db.insert(leads).values({ id: uid(), name: 'WhatsApp Lead', phone: '+628111222333', source: 'whatsapp', status: 'new' })
+  await db.insert(leads).values({ id: uid(), name: 'Anna Kova', phone: '+79005001122', email: 'anna@example.com', source: 'instagram', interest: 'Insta360 X3 for a shoot', status: 'contacted' })
+  await db.insert(leads).values({ id: uid(), name: 'Leo Martins', phone: '+5511987654321', source: 'website', interest: 'iPhone 15 Pro 3 days', status: 'quotation_sent' })
+  await db.insert(leads).values({ id: uid(), name: 'Priya Nair', phone: '+919810001122', source: 'referral', interest: 'Sony A7 V + gimbal', status: 'booking_pending' })
   await db.insert(invoiceTemplates).values({ id: uid(), name: 'Default invoice', bodyHtml: '<h1>INVOICE</h1>{{items}}', settingsJson: {} })
   await db.insert(agreementTemplates).values({ id: uid(), name: 'Default agreement', version: 1, bodyHtml: '<h1>RENTAL AGREEMENT</h1>{{device}}', active: true, updatedAt: now() })
 }

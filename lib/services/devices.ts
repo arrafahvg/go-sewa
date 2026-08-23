@@ -103,5 +103,103 @@ export async function reportDamage(input: {
   return { id }
 }
 
+/** Open maintenance jobs and unresolved damage reports (joined to asset codes). */
+export async function listMaintenanceTasks() {
+  const jobs = await db
+    .select({
+      id: deviceMaintenance.id, deviceId: deviceMaintenance.deviceId,
+      type: deviceMaintenance.type, description: deviceMaintenance.description,
+      costCents: deviceMaintenance.costCents, status: deviceMaintenance.status,
+      scheduledAt: deviceMaintenance.scheduledAt, completedAt: deviceMaintenance.completedAt,
+      assetCode: devices.assetCode,
+      deviceStatus: devices.status,
+    })
+    .from(deviceMaintenance)
+    .innerJoin(devices, eq(devices.id, deviceMaintenance.deviceId))
+    .orderBy(deviceMaintenance.createdAt)
+
+  const damage = await db
+    .select({
+      id: deviceDamageReports.id, deviceId: deviceDamageReports.deviceId,
+      bookingId: deviceDamageReports.bookingId, description: deviceDamageReports.description,
+      severity: deviceDamageReports.severity, chargeCents: deviceDamageReports.chargeCents,
+      resolved: deviceDamageReports.resolved,
+      assetCode: devices.assetCode,
+      deviceStatus: devices.status,
+    })
+    .from(deviceDamageReports)
+    .innerJoin(devices, eq(devices.id, deviceDamageReports.deviceId))
+    .orderBy(deviceDamageReports.createdAt)
+
+  return { jobs, damage }
+}
+
+/** Complete a maintenance job: mark done and return the device to available. */
+export async function completeMaintenance(input: {
+  id: string
+  costCents?: number
+  byUserId?: string | null
+}) {
+  const row = (await db.select().from(deviceMaintenance).where(eq(deviceMaintenance.id, input.id)))[0]
+  if (!row) throw new Error('Maintenance job not found.')
+  if (row.status === 'done') throw new Error('This maintenance job is already completed.')
+
+  await db.update(deviceMaintenance)
+    .set({ status: 'done', costCents: input.costCents ?? row.costCents, completedAt: new Date() })
+    .where(eq(deviceMaintenance.id, input.id))
+
+  // Return the device to the rentable pool after service.
+  await setDeviceStatus(row.deviceId, 'available', { byUserId: input.byUserId })
+  await logActivity({
+    userId: input.byUserId ?? null, action: 'maintenance_completed', entity: 'device_maintenance', entityId: input.id,
+    metadata: { deviceId: row.deviceId, costCents: input.costCents ?? row.costCents },
+  })
+  return { id: input.id }
+}
+
+/** Resolve a damage report (optionally writing a charge) and return the device to available. */
+export async function resolveDamageReport(input: {
+  id: string
+  chargeCents?: number
+  description?: string
+  byUserId?: string | null
+}) {
+  const report = (await db.select().from(deviceDamageReports).where(eq(deviceDamageReports.id, input.id)))[0]
+  if (!report) throw new Error('Damage report not found.')
+  if (report.resolved) throw new Error('This damage report is already resolved.')
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query(
+      `UPDATE device_damage_reports SET resolved = true, charge_cents = $1 WHERE id = $2`,
+      [(input.chargeCents ?? 0), input.id],
+    )
+    // Optionally record a damage charge line item (§ financials).
+    if ((input.chargeCents ?? 0) > 0) {
+      await client.query(
+        `INSERT INTO damage_charges (id, booking_id, device_id, description, amount_cents, status, created_at)
+         VALUES ($1, $2, $3, $4, $5, 'pending', now())`,
+        [crypto.randomUUID(), report.bookingId ?? null, report.deviceId,
+          input.description ?? report.description, input.chargeCents ?? 0],
+      )
+    }
+    await client.query('COMMIT')
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
+  }
+
+  // Reopening the device for rent.
+  await setDeviceStatus(report.deviceId, 'available', { byUserId: input.byUserId })
+  await logActivity({
+    userId: input.byUserId ?? null, action: 'damage_resolved', entity: 'device_damage_reports', entityId: input.id,
+    metadata: { deviceId: report.deviceId, chargeCents: input.chargeCents ?? 0 },
+  })
+  return { id: input.id }
+}
+
 // Re-export so dependents can reference the table for joins in one import.
 export { activityLogs }

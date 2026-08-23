@@ -101,7 +101,11 @@ devices** with their own asset codes, serial numbers, IMEIs and lifecycle.
 3. Implement in services → expose via actions → wire UI last (§77: never UI-first).
 4. Validate: `npx tsc --noEmit` must be clean, then `npm run build` must succeed.
 5. Update seed data (`lib/db/seed.ts`) when adding entities so the demo stays alive (§74/§75).
-6. Update `README.md` limitations/next-steps if scope changes.
+6. **Documentation is part of done — no exceptions.** Every change MUST update all three
+   (as applicable): `README.md` ("Known limitations / next steps"), `docs/SPEC.md`
+   (only if a behavior or contract changed), and the §78 phase-status table in this file.
+   A change without its docs update is INCOMPLETE — treat missing doc updates the same as
+   a failing build. Do not merge/commit with stale limitations or a stale phase table.
 
 ### Commands
 
@@ -123,8 +127,8 @@ npm run build        # production build (must pass before finishing)
 | 3 | Availability engine + conflict prevention | ✅ done |
 | 4 | Storefront: home / rent / detail / cart | ✅ core done (search/filter/sort pending §10) |
 | 5 | Checkout + confirmation + WhatsApp | ✅ done — multi-line cart checkout, confirmation, WhatsApp (delivery fields pending §15) |
-| 6 | Admin CRM + check-out/check-in/inspection | 🟡 mostly done — walk-in form, booking detail, device assignment, check-out/in, inspection done; CRM/leads UI pending; per-product `deposit_required` flag editable in inventory, but not yet enforced at checkout |
-| 7–9 | Invoices, agreements, maintenance ops | 🟡 invoices & agreements generation live; deposit/payment services live (`lib/services/deposits.ts`, `payments.ts`) but no actions/UI yet; maintenance ops schema + seed only |
+| 6 | Admin CRM + check-out/check-in/inspection | ✅ CRM (customers + leads), walk-in form, booking detail (device assignment, check-out/in, inspection, deposit & payment recording) done. Per-product `deposit_required` flag editable in inventory AND enforced at checkout (forces ID document + deposit hold) |
+| 7–9 | Invoices, agreements, deposits, maintenance ops | 🟡 invoices & agreements generation live; deposit/payment actions + UI live (`app/actions/deposits.ts`, `app/actions/payments.ts`, `components/admin/deposit-payment-panel.tsx`); maintenance + damage admin UI live (`/admin/maintenance`, `app/actions/maintenance.ts`, `lib/services/devices.ts` — schedule/complete jobs, report/resolve damage writing `damage_charges`). Damage-charge amount entry + deposit-forfeit wiring still pending |
 | 10 | CMS admin | ⏳ schema + seed only |
 | 11 | Tracking architecture | ⏳ schema-ready; never fake data (§80) |
 | 12 | SEO / perf / a11y / tests / i18n | ⏳ pending (ID/EN i18n required §9) |
@@ -138,6 +142,8 @@ A feature is done only when **all** hold:
 - edge cases from §76 are handled (no availability, conflicting ranges, empty cart,
   invalid dates);
 - admin actions write audit logs (§63);
+- `README.md`, `docs/SPEC.md` (if contracts changed) and the §78 phase table are updated
+  to reflect reality;
 - `npx tsc --noEmit` and `npm run build` both pass;
 - nothing from §80's forbidden list exists anywhere in the repo;
 - seed data still produces a living demo after your change.

@@ -4,18 +4,33 @@ import { createBooking, type BookingChannel } from '@/lib/services/bookings'
 import { getCurrentUser, requireStaff } from '@/lib/services/auth'
 import { getSetting } from '@/lib/services/settings'
 import { db } from '@/lib/db'
-import { customerDocuments } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { customerDocuments, products } from '@/lib/db/schema'
+import { eq, inArray } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
 /**
  * Server-side enforcement of the identity-document-as-collateral policy (§19,
- * §73): when `identity_document_required` is on, every booking needs a stored
- * document id that really exists in customer_documents — never trusted from UI.
+ * §73, §56): a stored identity document is required when (a) the global
+ * `identity_document_required` setting is on, OR (b) any product in the cart
+ * has `deposit_required` (that flag forces an ID document + deposit hold).
+ * The document id must really exist in customer_documents — never trusted
+ * from the client.
+ *
+ * @param productIds physical rentable product ids in the cart
+ * @param documentId customer_documents id uploaded during checkout (nullable)
  */
-async function assertIdentityDocument(documentId?: string): Promise<string | null> {
-  const required = (await getSetting('identity_document_required')) !== 'false'
-  if (!required) return null
+async function assertIdentityDocument(productIds: string[], documentId?: string): Promise<string | null> {
+  const requiredBySetting = (await getSetting('identity_document_required')) !== 'false'
+
+  let forcedByProduct = false
+  if (productIds.length) {
+    const rows = await db
+      .select({ depositRequired: products.depositRequired })
+      .from(products).where(inArray(products.id, [...new Set(productIds.filter(Boolean))]))
+    forcedByProduct = rows.some((r) => r.depositRequired)
+  }
+
+  if (!requiredBySetting && !forcedByProduct) return null
   if (!documentId) {
     return 'An identity document photo (KTP or SIM) is required to complete this rental.'
   }
@@ -52,7 +67,8 @@ export async function submitBooking(input: {
   // Link the booking's customer record to the signed-in account when there is one,
   // so customers can see their bookings under /account/bookings (§54, §78).
   const current = await getCurrentUser()
-  const docError = await assertIdentityDocument(input.identityDocumentId)
+  const productIds = (input.items?.map((i) => i.productId) ?? []).concat(input.productId ? [input.productId] : [])
+  const docError = await assertIdentityDocument(productIds, input.identityDocumentId)
   if (docError) return { ok: false as const, error: docError }
   const result = await createBooking({
     customerId: input.customerId ?? null,
@@ -105,7 +121,7 @@ export async function submitAdminBooking(input: {
 }) {
   const staff = await requireStaff()
   if (!staff) return { ok: false as const, error: 'You do not have permission to create admin bookings.' }
-  const docError = await assertIdentityDocument(input.identityDocumentId)
+  const docError = await assertIdentityDocument(input.productId ? [input.productId] : [], input.identityDocumentId)
   if (docError) return { ok: false as const, error: docError }
   const result = await createBooking({
     customerId: input.customerId ?? null,

@@ -123,23 +123,25 @@ a product's price later never mutates historical rentals.
   management). "My bookings" is live at `/account/bookings`: online checkouts link
   the booking's customer record to the signed-in account (`customers.user_id`),
   and existing customers are auto-linked by exact email match on first visit.
-- Admin CRM/leads screens are not built yet (booking detail + handover ops are:
-  `/admin/bookings/[id]`). Product/device/pricing CRUD UI is built at
+- Admin CRM/CRM screens are live at `/admin/customers` (customer profiles + their
+  rental history) and `/admin/leads` (create, filter by status, convert to a
+  customer). Booking detail `/admin/bookings/[id]` includes handover + deposit
+  & payment recording. Product/device/pricing CRUD UI is built at
   `/admin/inventory`.
 - Invoice generation is live: booking detail → "Generate invoice", printable
   document at `/admin/invoices/[id]` (print-to-PDF), list at `/admin/invoices`.
 - Rental agreement generation is live: booking detail → "Generate agreement",
   printable/signature-ready document at `/admin/agreements/[id]`, merged from
   the active template + booking snapshot. Template editing UI is pending.
-- Deposits & payments (§13, §16): services are live (`lib/services/deposits.ts`,
-  `lib/services/payments.ts` — deposit held/returned/forfeited lifecycle on the
-  `deposits` + `deposit_transactions` tables, payment recording with derived
-  paid status). Still pending: server actions + booking-detail UI to record
-  payments and deposit movements, wiring the new per-product
-  `deposit_required` flag (products table column added in
-  `drizzle/0003_worried_madelyne_pryor.sql` — run `npm run db:push`) into
-  checkout pricing so flagged products force an ID document + deposit hold,
-  and seed data for a living deposit/payment demo.
+- Deposits & payments (§13, §16): lifecycle is live end-to-end. Services
+  (`lib/services/deposits.ts`, `payments.ts`), server actions
+  (`app/actions/deposits.ts`, `app/actions/payments.ts`) and the booking-detail
+  panel (`components/admin/deposit-payment-panel.tsx`) record deposit
+  held/returned/forfeited and payments (derived paid status). The per-product
+  `deposit_required` flag (column added in
+  `drizzle/0003_worried_madelyne_pryor.sql` — run `npm run db:push`) is now
+  enforced at checkout: flagged products force an identity document upload.
+  Seed data marks the iPhone 15 Pro as `deposit_required`.
 - Identity document (KTP/SIM) collateral upload is live: required at online
   checkout and walk-in creation, stored in a private Supabase Storage bucket
   (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ID_DOCS_BUCKET`),
@@ -150,6 +152,10 @@ a product's price later never mutates historical rentals.
   booking UI (`verifyIdentityDocument` service exists), and enforcement of
   `hasValidIdDocument()` at check-out time.
 - Storefront search/filter/sort (§10), gallery/specs (§11), delivery form (§15) pending.
+- Maintenance & damage ops (§7–9) are live at `/admin/maintenance`: schedule/complete
+  maintenance jobs (return device to available on completion) and report/resolve
+  damage (writing a `damage_charges` line item when a charge is set). Completing a
+  maintenance cost field and per-charge amount entry are still streamlined.
 - Booking status automation runs on dashboard load + cron endpoint; a real scheduler
   (e.g. Vercel Cron hitting `/api/cron/overdue`) should be configured in deployment.
 - No automated tests yet — the availability/pricing engines are pure enough to
