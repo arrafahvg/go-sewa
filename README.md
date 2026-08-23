@@ -140,8 +140,14 @@ a product's price later never mutates historical rentals.
 - Invoice generation is live: booking detail → "Generate invoice", printable
   document at `/admin/invoices/[id]` (print-to-PDF), list at `/admin/invoices`.
 - Rental agreement generation is live: booking detail → "Generate agreement",
+- Rental agreement generation is live: booking detail → "Generate agreement",
   printable/signature-ready document at `/admin/agreements/[id]`, merged from
-  the active template + booking snapshot. Template editing UI is pending.
+  the active template + booking snapshot.
+- Document templates (§21B): staff edit agreement & invoice templates at
+  `/admin/templates` (structured fields + live preview; saving bumps the
+  version and can re-render existing draft agreements). Invoices and agreements
+  support Print, real PDF download (jsPDF), and sharing via revocable public
+  links `/d/[token]` to WhatsApp or email.
 - Deposits & payments (§13, §16): lifecycle is live end-to-end. Services
   (`lib/services/deposits.ts`, `payments.ts`), server actions
   (`app/actions/deposits.ts`, `app/actions/payments.ts`) and the booking-detail

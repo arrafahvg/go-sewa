@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import InvoiceActions from '@/components/admin/invoice-actions'
+import DocumentActions from '@/components/admin/document-actions'
 import { getInvoiceDetail } from '@/lib/services/invoices'
 import { formatMoney } from '@/lib/utils/money'
 
@@ -21,13 +22,24 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   return (
     <div className="min-h-screen bg-[#f4f1ea] px-6 py-8 text-[#173b3b] print:bg-white print:p-0">
       <div className="mx-auto max-w-3xl">
-        <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="space-y-3 print:hidden">
           <Link href="/admin/invoices" className="text-sm font-bold text-[#387066] hover:underline">← Invoices</Link>
+          <DocumentActions
+            kind="invoice"
+            docId={invoice.id}
+            title={`Invoice ${invoice.number}`}
+            messageLines={[
+              `Go-Sewa — Invoice ${invoice.number}`,
+              booking ? `Rental ${booking.number}: ${booking.startsAt.toLocaleDateString()} → ${booking.endsAt.toLocaleDateString()}` : '',
+              `Total due: ${formatMoney(invoice.totalCents)}`,
+              'View your invoice here:',
+            ].filter(Boolean)}
+          />
           <InvoiceActions invoiceId={invoice.id} status={invoice.status} />
         </div>
 
         {/* Printable document — merged from immutable booking snapshots (§58). */}
-        <article className="mt-6 rounded-2xl border border-[#173b3b]/10 bg-white p-10 print:mt-0 print:rounded-none print:border-0">
+        <article id="printable-doc" className="mt-6 rounded-2xl border border-[#173b3b]/10 bg-white p-10 print:mt-0 print:rounded-none print:border-0">
           <header className="flex items-start justify-between border-b border-[#173b3b]/15 pb-6">
             <div>
               <p className="font-serif text-2xl font-bold">go<span className="text-[#e76f51]">—</span>sewa</p>

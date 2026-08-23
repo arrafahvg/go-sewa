@@ -79,6 +79,7 @@ const GROUPS: Group[] = [
     items: [
       { label: 'Maintenance & damage', href: '/admin/maintenance', icon: Wrench },
       { label: 'Invoices', href: '/admin/invoices', icon: ReceiptText },
+      { label: 'Document templates', href: '/admin/templates', icon: FileText },
     ],
   },
   {

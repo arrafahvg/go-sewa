@@ -405,6 +405,8 @@ export const invoiceTemplates = pgTable('invoice_templates', {
   name: text('name').notNull(),
   bodyHtml: text('body_html').notNull(),
   settingsJson: jsonb('settings_json').$type<Record<string, string>>().default({}),
+  active: boolean('active').notNull().default(true),
+  version: integer('version').notNull().default(1),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 
@@ -419,6 +421,8 @@ export const invoices = pgTable('invoices', {
   dueAt: timestamp('due_at'),
   issuedAt: timestamp('issued_at').notNull().defaultNow(),
   createdById: text('created_by_id'),
+  /** Public read-only share token (/d/[token]) — unguessable, revocable (§31B docs). */
+  shareToken: text('share_token').unique(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
@@ -427,6 +431,8 @@ export const agreementTemplates = pgTable('agreement_templates', {
   name: text('name').notNull(),
   version: integer('version').notNull().default(1),
   bodyHtml: text('body_html').notNull(),
+  /** Structured editor fields (§21B) — header/intro/terms/footer rendered into bodyHtml on save. */
+  settingsJson: jsonb('settings_json').$type<Record<string, string>>().default({}),
   active: boolean('active').notNull().default(true),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
@@ -439,6 +445,8 @@ export const rentalAgreements = pgTable('rental_agreements', {
   templateVersion: integer('template_version').notNull().default(1),
   contentHtml: text('content_html'),
   status: text('status').notNull().default('draft'),  // draft | signed | printed
+  /** Public read-only share token (/d/[token]) — unguessable, revocable. */
+  shareToken: text('share_token').unique(),
   generatedById: text('generated_by_id'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })

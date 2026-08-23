@@ -7,6 +7,7 @@ import {
   IDENTITY_TYPES, type IdentityType,
 } from '@/lib/services/documents'
 import { revalidatePath } from 'next/cache'
+import { createShareToken, revokeShareToken } from '@/lib/services/share'
 
 export type IdentityUploadInput = {
   customerId?: string
@@ -54,5 +55,25 @@ export async function verifyIdentityDocumentAction(customerId: string) {
   if (!done) return { ok: false as const, error: 'Customer not found.' }
   revalidatePath('/admin')
   revalidatePath('/admin/bookings')
+  return { ok: true as const }
+}
+
+/** Staff-only share-token actions (§63 audit-logged). */
+export async function createShareTokenAction(kind: string, id: string) {
+  const staff = await requireStaff()
+  if (!staff) return { ok: false as const, error: 'Not authorized.' }
+  if (kind !== 'invoice' && kind !== 'agreement') return { ok: false as const, error: 'Unknown document type.' }
+  const token = await createShareToken(kind, id, staff.id)
+  if (!token) return { ok: false as const, error: 'Document not found.' }
+  return { ok: true as const, token }
+}
+
+export async function revokeShareTokenAction(kind: string, id: string) {
+  const staff = await requireStaff()
+  if (!staff) return { ok: false as const, error: 'Not authorized.' }
+  if (kind !== 'invoice' && kind !== 'agreement') return { ok: false as const, error: 'Unknown document type.' }
+  const done = await revokeShareToken(kind, id, staff.id)
+  if (!done) return { ok: false as const, error: 'Document not found.' }
+  revalidatePath(`/admin/${kind === 'invoice' ? 'invoices' : 'agreements'}/${id}`)
   return { ok: true as const }
 }

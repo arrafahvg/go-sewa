@@ -1290,6 +1290,29 @@ The agreement should be:
 
 The admin must be able to customize agreement templates without changing source code.
 
+# 21B. DOCUMENT TEMPLATES, PDF & SHARING
+
+Templates for rental agreements AND invoices must be editable by staff in the
+admin console (`/admin/templates`) through structured fields — document title,
+intro line, terms (one per line), footer note, signature-line toggle — with a
+live preview. Staff never edit raw HTML. Saving:
+
+- stores the fields and renders them into the stored template body;
+- bumps the template version;
+- is audit-logged (§63);
+- offers to re-render existing DRAFT agreements with the new version via a
+  confirmation dialog. Signed/printed agreements and paid invoices are never
+  modified; item/pricing data always comes from booking snapshots (§58).
+
+Every invoice and agreement document must support:
+
+- Print (browser print dialog, print-styled page);
+- Download as a real `.pdf` file rendered from the on-screen document;
+- Share via WhatsApp and email using a public read-only link `/d/<token>`.
+  The token is an unguessable UUID minted (and revocable) by staff through an
+  audit-logged action. The shared view exposes only the document facts already
+  printed — no admin access, no ID-document images, no internal notes.
+
 ---
 
 # 22. DEVICE ASSIGNMENT
