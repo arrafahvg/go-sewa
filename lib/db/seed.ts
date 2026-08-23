@@ -22,6 +22,10 @@ export async function seed(): Promise<void> {
     ['business_name', 'Go-Sewa'],
     ['business_address', 'Jl. Raya Seminyak No. 12, Bali, Indonesia'],
     ['business_email', 'hello@gosewa.id'],
+    ['phone_number', '+62 812 3456 7890'],
+    ['instagram_url', 'https://instagram.com/gosewa.id'],
+    ['maps_url', 'https://maps.google.com/?q=Seminyak,Bali'],
+    ['footer_text', 'Better gear for better stories. Made with care in Bali.'],
     ['minimum_rental_days', '1'],
     ['turnaround_hours', '4'],
     ['delivery_fee_cents', '30000'],
@@ -281,9 +285,13 @@ export async function seed(): Promise<void> {
 
   // --- CMS / FAQ / testimonials / leads / templates ---------------------------------
   await db.insert(cmsPages).values({ id: uid(), slug: 'home', title: 'Home', sections: [], active: true, updatedAt: now() })
-  await db.insert(faq).values({ id: uid(), questionId: 'q1', questionEn: 'How does rental work?', answerId: 'a1', answerEn: 'Pick a device, choose your dates, book, then pick up or get delivery.' })
-  await db.insert(faq).values({ id: uid(), questionId: 'q2', questionEn: 'Is a deposit required?', answerId: 'a2', answerEn: 'Yes, refundable after the device is returned in good condition.' })
-  await db.insert(testimonials).values({ id: uid(), name: 'Maya', rating: 5, quoteId: 't1', quoteEn: 'Smooth, reliable, premium gear.' })
+  await db.insert(faq).values({ id: uid(), questionId: 'q1', questionEn: 'How does rental work?', answerId: 'a1', answerEn: 'Pick a device, choose your dates, book, then pick up or get delivery.', sortOrder: 0 })
+  await db.insert(faq).values({ id: uid(), questionId: 'q2', questionEn: 'Is a deposit required?', answerId: 'a2', answerEn: 'Yes, a refundable deposit is held and returned after the device comes back in good condition.', sortOrder: 1 })
+  await db.insert(faq).values({ id: uid(), questionId: 'q3', questionEn: 'Do you offer delivery?', answerId: 'a3', answerEn: 'Yes, we deliver across Bali for a small fee. Pick-up from our studio is free.', sortOrder: 2 })
+  await db.insert(faq).values({ id: uid(), questionId: 'q4', questionEn: 'What happens if the device is late?', answerId: 'a4', answerEn: 'A daily late fee applies per the terms you accept at checkout.', sortOrder: 3 })
+  await db.insert(testimonials).values({ id: uid(), name: 'Maya', rating: 5, quoteId: 't1', quoteEn: 'Smooth, reliable, premium gear.', sortOrder: 0 })
+  await db.insert(testimonials).values({ id: uid(), name: 'Lucas', rating: 5, quoteId: 't2', quoteEn: 'The action cam was spotless and check-in took two minutes.', sortOrder: 1 })
+  await db.insert(testimonials).values({ id: uid(), name: 'Sari', rating: 4, quoteId: 't3', quoteEn: 'Great prices and helpful staff in Seminyak.', sortOrder: 2 })
   await db.insert(leads).values({ id: uid(), name: 'WhatsApp Lead', phone: '+628111222333', source: 'whatsapp', status: 'new' })
   await db.insert(leads).values({ id: uid(), name: 'Anna Kova', phone: '+79005001122', email: 'anna@example.com', source: 'instagram', interest: 'Insta360 X3 for a shoot', status: 'contacted' })
   await db.insert(leads).values({ id: uid(), name: 'Leo Martins', phone: '+5511987654321', source: 'website', interest: 'iPhone 15 Pro 3 days', status: 'quotation_sent' })

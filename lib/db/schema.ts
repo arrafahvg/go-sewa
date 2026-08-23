@@ -502,6 +502,12 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   business_name: 'Go-Sewa',
   business_address: 'Jl. Raya Seminyak No. 12, Bali, Indonesia',
   business_email: 'hello@gosewa.id',
+  /** Company profile / content-CMS fields (§42) — editable from /admin/settings. */
+  phone_number: '',
+  instagram_url: '',
+  logo_url: '',
+  maps_url: '',
+  footer_text: 'Better gear for better stories. Made with care in Bali.',
   default_language: 'id',
   minimum_rental_days: '1',
   maximum_rental_days: '30',

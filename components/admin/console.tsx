@@ -32,6 +32,8 @@ export default function AdminConsole({ bookings, customers, products }: { bookin
             <Link href="/admin/leads" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Leads</Link>
             <Link href="/admin/maintenance" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Maintenance</Link>
             <Link href="/admin/invoices" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Invoices</Link>
+            <Link href="/admin/settings" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Settings</Link>
+            <Link href="/admin/content" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Content</Link>
             <a href="/" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">View storefront</a>
           </nav>
         </div>

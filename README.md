@@ -152,6 +152,17 @@ a product's price later never mutates historical rentals.
   booking UI (`verifyIdentityDocument` service exists), and enforcement of
   `hasValidIdDocument()` at check-out time.
 - Storefront search/filter/sort (§10), gallery/specs (§11), delivery form (§15) pending.
+- CMS (§42) is live in two admin screens:
+  - `/admin/settings` — company profile (business name, **managed logo upload** to
+    `/public/uploads/site/` via the storage provider + logo URL fallback, address,
+    email, phone, WhatsApp, Instagram, Maps, footer tagline) applied to the storefront
+    shell (header brand/logo, footer contact + socials, floating WhatsApp number).
+  - `/admin/content` — content CMS: homepage hero (headline/kicker/sub), FAQ
+    (add/edit/hide/delete) and testimonials (add/edit/hide/delete/rating), all stored as
+    structured data (`cms_pages.sections` JSONB + `faq`/`testimonials` tables) and
+    rendered on the home page. Every write is staff-gated (§54) and audit-logged (§63).
+  Storefront and admin routes ship loading skeletons (§67). Still pending: i18n (§9),
+  cms_pages SEO-metadata editing, and a real scheduler for `/api/cron/overdue`.
 - Maintenance & damage ops (§7–9) are live at `/admin/maintenance`: schedule/complete
   maintenance jobs (return device to available on completion) and report/resolve
   damage (writing a `damage_charges` line item when a charge is set). Completing a

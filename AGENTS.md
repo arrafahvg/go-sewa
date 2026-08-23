@@ -129,7 +129,7 @@ npm run build        # production build (must pass before finishing)
 | 5 | Checkout + confirmation + WhatsApp | ✅ done — multi-line cart checkout, confirmation, WhatsApp (delivery fields pending §15) |
 | 6 | Admin CRM + check-out/check-in/inspection | ✅ CRM (customers + leads), walk-in form, booking detail (device assignment, check-out/in, inspection, deposit & payment recording) done. Per-product `deposit_required` flag editable in inventory AND enforced at checkout (forces ID document + deposit hold) |
 | 7–9 | Invoices, agreements, deposits, maintenance ops | 🟡 invoices & agreements generation live; deposit/payment actions + UI live (`app/actions/deposits.ts`, `app/actions/payments.ts`, `components/admin/deposit-payment-panel.tsx`); maintenance + damage admin UI live (`/admin/maintenance`, `app/actions/maintenance.ts`, `lib/services/devices.ts` — schedule/complete jobs, report/resolve damage writing `damage_charges`). Damage-charge amount entry + deposit-forfeit wiring still pending |
-| 10 | CMS admin | ⏳ schema + seed only |
+| 10 | CMS admin | 🟡 live — `/admin/settings` company profile (name, managed logo upload, address, email, phone, WhatsApp, Instagram, Maps, footer tagline) applied to storefront shell, plus `/admin/content` content CMS (homepage hero, FAQ, testimonials add/edit/toggle/delete) rendered on the storefront home page (§42). Structured content (JSONB sections + separate faq/testimonials tables, §42 "structured instead of raw HTML"). i18n (§9) and cms_pages SEO metadata editing still pending |
 | 11 | Tracking architecture | ⏳ schema-ready; never fake data (§80) |
 | 12 | SEO / perf / a11y / tests / i18n | ⏳ pending (ID/EN i18n required §9) |
 
