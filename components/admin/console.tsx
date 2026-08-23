@@ -5,12 +5,12 @@ import { useMemo, useState } from 'react'
 import { CalendarDays, Plus, Users, LayoutDashboard } from 'lucide-react'
 import { formatMoney } from '@/lib/utils/money'
 import type { BookingRow } from '@/lib/data/admin'
-import { NewRentalForm, CustomersTable, BookingsTable } from './tables'
+import { NewRentalForm, BookingsTable } from './tables'
 
 type Product = { id: string; slug: string; name: string; depositCents: number; dailyCents: number }
 type Customer = { id: string; name: string; phone: string | null }
 type Bookings = BookingRow[]
-type Tab = 'overview' | 'bookings' | 'new' | 'customers'
+type Tab = 'overview' | 'bookings' | 'new'
 
 export default function AdminConsole({ bookings, customers, products }: { bookings: Bookings; customers: Customer[]; products: Product[] }) {
   const [tab, setTab] = useState<Tab>('overview')
@@ -33,18 +33,20 @@ export default function AdminConsole({ bookings, customers, products }: { bookin
       </header>
 
       <nav className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-6 pt-6">
-        {([['overview', 'Overview', LayoutDashboard], ['bookings', 'Bookings', CalendarDays], ['new', '+ New Rental', Plus], ['customers', 'Customers', Users]] as const).map(([key, label, Icon]) => (
+        {([['overview', 'Overview', LayoutDashboard], ['bookings', 'Bookings', CalendarDays], ['new', '+ New Rental', Plus]] as const).map(([key, label, Icon]) => (
           <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${tab === key ? 'bg-[#173b3b] text-white' : 'bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>
             <Icon size={15} /> {label}
           </button>
         ))}
+        <Link href="/admin/customers" className="flex items-center gap-2 whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-bold text-[#173b3b]/70 transition hover:bg-[#e4eee8]">
+          <Users size={15} /> Customers
+        </Link>
       </nav>
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         {tab === 'overview' && <Overview bookings={bookings} statusCounts={statusCounts} active={active} onNew={() => setTab('new')} />}
         {tab === 'bookings' && <BookingsTable bookings={bookings} />}
         {tab === 'new' && <NewRentalForm products={products} customers={customers} />}
-        {tab === 'customers' && <CustomersTable customers={customers} />}
       </main>
     </div>
   )
