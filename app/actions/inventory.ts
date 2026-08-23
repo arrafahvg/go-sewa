@@ -8,6 +8,8 @@ import {
 } from '@/lib/services/inventory'
 import type { PricingRuleKind } from '@/lib/db/schema'
 import type { DeviceStatus } from '@/lib/services/devices'
+import { storageProvider } from '@/lib/services/storage'
+import { logActivity, uid } from '@/lib/services/audit'
 
 /**
  * Inventory admin server actions (§54, §59, §63). Every action re-checks the
@@ -31,6 +33,7 @@ export async function saveProductAction(input: {
   depositRequired: boolean
   defaultFulfillment?: string
   imageUrl?: string | null
+  gallery?: string[] | null
   active?: boolean
 }): Promise<Result> {
   const staff = await requireStaff()
@@ -107,6 +110,45 @@ export async function saveDeviceAction(input: {
       await createDevice(input, staff.id)
     }
     return { ok: true }
+  } catch (e) {
+    return fail(e)
+  }
+}
+
+const ALLOWED_IMAGE_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // 5 MB
+
+/**
+ * Managed product image upload. Staff-only. Validates the file server-side
+ * (MIME allow-list + size cap), stores it publicly via the storage provider
+ * under products/, writes an audit entry (§63) and returns the public URL.
+ * The URL is only persisted when the product form is saved.
+ */
+export async function uploadProductImageAction(input: { fileBase64: string; mimeType: string }): Promise<Result & { url?: string }> {
+  const staff = await requireStaff()
+  if (!staff) return { ok: false, error: 'You need staff permissions to upload product images.' }
+  try {
+    if (!ALLOWED_IMAGE_MIME.includes(input.mimeType)) {
+      return { ok: false, error: 'Only PNG, JPG, WebP or GIF images are accepted.' }
+    }
+    const bytes = Buffer.from(input.fileBase64, 'base64')
+    if (bytes.length === 0) return { ok: false, error: 'The file is empty.' }
+    if (bytes.length > MAX_IMAGE_BYTES) return { ok: false, error: 'The image must be under 5 MB.' }
+
+    const ext = input.mimeType === 'image/png' ? 'png'
+      : input.mimeType === 'image/webp' ? 'webp'
+      : input.mimeType === 'image/gif' ? 'gif' : 'jpg'
+    const uploaded = await storageProvider.uploadFile(bytes, {
+      originalName: `product.${ext}`,
+      mimeType: input.mimeType,
+      folder: 'products',
+    })
+
+    await logActivity({
+      userId: staff.id, action: 'product_image_uploaded', entity: 'products',
+      entityId: uid(), metadata: { url: uploaded.url, mimeType: input.mimeType },
+    })
+    return { ok: true, url: uploaded.url }
   } catch (e) {
     return fail(e)
   }

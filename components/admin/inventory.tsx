@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Plus, Package, Smartphone } from 'lucide-react'
+import { Loader2, Plus, Package, Smartphone, ImagePlus, X } from 'lucide-react'
 import { formatMoney } from '@/lib/utils/money'
 import type { AdminDevice } from '@/lib/data/admin'
 import {
-  saveProductAction, savePricingRuleAction, deletePricingRuleAction, saveDeviceAction,
+  saveProductAction, uploadProductImageAction, savePricingRuleAction, deletePricingRuleAction, saveDeviceAction,
 } from '@/app/actions/inventory'
 
 type PricingRuleKind = 'daily' | 'weekly' | 'monthly' | 'weekend' | 'seasonal' | 'promo' | 'custom'
@@ -19,6 +19,7 @@ export type AdminProductView = {
   depositRequired: boolean
   active: boolean
   imageUrl: string | null
+  gallery: string[]
 }
 export type AdminPricingRule = {
   id: string
@@ -135,9 +136,51 @@ function ProductForm({ product, onDone }: { product: AdminProductView | null; on
   const [deposit, setDeposit] = useState(String(product?.depositCents ?? 0))
   const [depositRequired, setDepositRequired] = useState(product?.depositRequired ?? false)
   const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? '')
+  const [gallery, setGallery] = useState<string[]>(product?.gallery ?? [])
   const [active, setActive] = useState(product?.active ?? true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleImageUpload(file: File) {
+    setUploading(true); setUploadError(null); setError(null)
+    try {
+      const res = await uploadProductImageAction({ fileBase64: await readAsBase64(file), mimeType: file.type })
+      if (!res.ok) setUploadError(res.error)
+      else if (res.url) setImageUrl(res.url)
+    } catch {
+      setUploadError('Could not read the selected file.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function readAsBase64(file: File) {
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    let binary = ''
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+    return btoa(binary)
+  }
+
+  async function handleGalleryUpload(file: File) {
+    setUploading(true); setUploadError(null)
+    try {
+      const res = await uploadProductImageAction({ fileBase64: await readAsBase64(file), mimeType: file.type })
+      if (!res.ok) setUploadError(res.error)
+      else if (res.url) { setGallery((g) => [...g, res.url!]); setImageUrl((u) => u || res.url!) }
+    } catch {
+      setUploadError('Could not read the selected file.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function removeFromGallery(url: string) {
+    setGallery((g) => g.filter((u) => u !== url))
+  }
 
   async function submit() {
     setBusy(true); setError(null)
@@ -149,6 +192,7 @@ function ProductForm({ product, onDone }: { product: AdminProductView | null; on
       depositCents: Math.round(Number(deposit) || 0),
       depositRequired,
       imageUrl: imageUrl || null,
+      gallery,
       active,
     })
     setBusy(false)
@@ -163,7 +207,35 @@ function ProductForm({ product, onDone }: { product: AdminProductView | null; on
         <label className="block text-xs font-bold text-[#173b3b]/60">Name<input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} /></label>
         <label className="block text-xs font-bold text-[#173b3b]/60">Slug {product && <span className="font-normal">(locked after creation)</span>}<input value={slug} onChange={(e) => setSlug(e.target.value)} disabled={!!product} className={`${inputCls} ${product ? 'opacity-50' : ''}`} placeholder="auto-generated from name" /></label>
         <label className="block text-xs font-bold text-[#173b3b]/60">Deposit (Rp)<input type="number" min={0} value={deposit} onChange={(e) => setDeposit(e.target.value)} className={inputCls} /></label>
-        <label className="block text-xs font-bold text-[#173b3b]/60">Image URL<input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className={inputCls} placeholder="/images/..." /></label>
+        <div className="text-xs font-bold text-[#173b3b]/60">
+          Product image
+          <div className="mt-1 flex items-start gap-2">
+            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className={inputCls} placeholder="/images/... or upload" />
+            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ''; if (f) void handleImageUpload(f) }} />
+            <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="flex shrink-0 items-center gap-1 self-stretch rounded-lg border border-[#173b3b]/15 bg-white px-3 py-2 font-bold text-[#173b3b] hover:bg-[#e4eee8] disabled:opacity-50">
+              {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />}{uploading ? 'Uploading…' : 'Upload'}
+            </button>
+          </div>
+          {uploadError && <p className="mt-1 text-xs font-bold text-[#a43d2b]">{uploadError}</p>}
+          {imageUrl && <img src={imageUrl} alt="Product image preview" className="mt-2 h-24 w-24 rounded-lg border border-[#173b3b]/10 object-cover" />}
+        </div>
+        <div className="text-xs font-bold text-[#173b3b]/60 sm:col-span-2">
+          Gallery photos
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            {gallery.map((url) => (
+              <div key={url} className="relative">
+                <img src={url} alt="Gallery photo" className="h-20 w-20 rounded-lg border border-[#173b3b]/10 object-cover" />
+                <button type="button" onClick={() => removeFromGallery(url)} title="Remove photo" className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#a43d2b] text-white"><X size={12} /></button>
+              </div>
+            ))}
+            <input ref={galleryInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ''; if (f) void handleGalleryUpload(f) }} />
+            <button type="button" onClick={() => galleryInputRef.current?.click()} disabled={uploading} className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[#173b3b]/25 text-[#173b3b]/50 hover:bg-[#f1eee7] disabled:opacity-50">
+              {uploading ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}<span>{uploading ? 'Uploading…' : 'Add'}</span>
+            </button>
+          </div>
+          <p className="mt-1 font-normal">Extra photos shown on the product detail page.</p>
+          {uploadError && <p className="mt-1 text-xs font-bold text-[#a43d2b]">{uploadError}</p>}
+        </div>
         <label className="block text-xs font-bold text-[#173b3b]/60 sm:col-span-2">Description<textarea value={description ?? ''} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} /></label>
       </div>
       <label className="mt-3 flex items-center gap-2 text-xs font-bold text-[#173b3b]/60">

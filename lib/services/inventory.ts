@@ -36,6 +36,7 @@ export type ProductInput = {
   defaultFulfillment?: string
   imageUrl?: string | null
   specs?: Record<string, string>
+  gallery?: string[] | null
   active?: boolean
 }
 
@@ -64,6 +65,7 @@ export async function createProduct(input: ProductInput, byUserId?: string | nul
     depositRequired: input.depositRequired ?? false,
     defaultFulfillment: input.defaultFulfillment ?? 'pickup',
     imageUrl: input.imageUrl ?? null,
+    gallery: input.gallery ?? [],
     active: input.active ?? true,
   })
   await logActivity({ userId: byUserId, action: 'product_created', entity: 'product', entityId: id, metadata: { slug } })
@@ -82,6 +84,7 @@ export async function updateProduct(id: string, patch: Partial<ProductInput>, by
   if (patch.depositRequired !== undefined) clean.depositRequired = patch.depositRequired
   if (patch.defaultFulfillment !== undefined) clean.defaultFulfillment = patch.defaultFulfillment
   if (patch.imageUrl !== undefined) clean.imageUrl = patch.imageUrl
+  if (patch.gallery !== undefined) clean.gallery = patch.gallery
   if (patch.specs !== undefined) clean.specs = patch.specs
   if (patch.active !== undefined) clean.active = patch.active
 

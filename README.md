@@ -181,6 +181,7 @@ a product's price later never mutates historical rentals.
     (add/edit/hide/delete) and testimonials (add/edit/hide/delete/rating), all stored as
     structured data (`cms_pages.sections` JSONB + `faq`/`testimonials` tables) and
     rendered on the home page. Every write is staff-gated (§54) and audit-logged (§63).
+- **Managed product image upload** is live in /admin/inventory: the product form accepts a file (PNG/JPG/WebP/GIF, max 5 MB, validated server-side) which is stored via the storage provider to /public/uploads/products/, audit-logged (§63), previewed inline and persisted with the product on save. A manual URL can still be entered. Multi-image gallery management (products.gallery) is also live in the product form: add photos via upload (stored alongside main images, audit-logged §63), remove them inline; the storefront detail page renders the gallery (§11).
   The admin console uses a sticky multi-level sidebar (`components/admin/admin-shell.tsx`,
   §43): Overview plus collapsible Catalog / Customers / Operations / Site groups, with
   active-page highlighting, a collapse-to-icon-rail toggle (preference persisted in

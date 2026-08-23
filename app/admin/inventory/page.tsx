@@ -27,6 +27,7 @@ export default async function InventoryPage() {
     depositRequired: p.depositRequired,
     active: p.active,
     imageUrl: p.imageUrl,
+    gallery: p.gallery ?? [],
   }))
   const rules: AdminPricingRule[] = ruleRows.map((r) => ({
     id: r.id,
