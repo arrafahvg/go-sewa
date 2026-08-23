@@ -32,3 +32,10 @@ next-env.d.ts
 dev.log
 db-check.js
 promote-owner.js
+
+# uploads
+/public/uploads/
+# local dev artifacts
+dev.log
+db-check.js
+promote-owner.js

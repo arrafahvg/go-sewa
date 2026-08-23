@@ -138,3 +138,26 @@ export async function verifyIdentityDocument(customerId: string, verifiedBy: str
   })
   return true
 }
+
+/** Validate that a customer has at least one valid ID document on file.
+ * Used during booking confirmation/check-out (§19).
+ */
+export async function hasValidIdDocument(customerId: string): Promise<boolean> {
+  const customer = await db
+    .select({ idType: customers.idType, idNumber: customers.idNumber, idVerified: customers.idVerified })
+    .from(customers)
+    .where(eq(customers.id, customerId))
+    .limit(1)
+
+  if (!customer.length) return false
+  const c = customer[0]
+
+  // Must have a document type and number recorded
+  if (!c.idType || !c.idNumber?.trim()) return false
+
+  // Must be verified by staff (can relax this later if needed)
+  if (!c.idVerified) return false
+
+  // Type must be one of the allowed Indonesia ID types
+  return IDENTITY_TYPES.includes(c.idType as IdentityType)
+}

@@ -28,6 +28,7 @@ export async function saveProductAction(input: {
   categoryId?: string | null
   description?: string
   depositCents: number
+  depositRequired: boolean
   defaultFulfillment?: string
   imageUrl?: string | null
   active?: boolean

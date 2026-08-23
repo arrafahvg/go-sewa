@@ -54,6 +54,7 @@ export const products = pgTable('products', {
   description: text('description').default(''),
   specs: jsonb('specs').$type<Record<string, string>>().default({}),
   depositCents: integer('deposit_cents').notNull().default(0),
+  depositRequired: boolean('deposit_required').notNull().default(false),
   defaultFulfillment: text('default_fulfillment').notNull().default('pickup'),
   imageUrl: text('image_url'),
   gallery: jsonb('gallery').$type<string[]>().default([]),

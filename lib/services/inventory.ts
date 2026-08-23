@@ -32,6 +32,7 @@ export type ProductInput = {
   categoryId?: string | null
   description?: string
   depositCents: number
+  depositRequired?: boolean
   defaultFulfillment?: string
   imageUrl?: string | null
   specs?: Record<string, string>
@@ -60,6 +61,7 @@ export async function createProduct(input: ProductInput, byUserId?: string | nul
     description: input.description ?? '',
     specs: input.specs ?? {},
     depositCents: input.depositCents,
+    depositRequired: input.depositRequired ?? false,
     defaultFulfillment: input.defaultFulfillment ?? 'pickup',
     imageUrl: input.imageUrl ?? null,
     active: input.active ?? true,
@@ -77,6 +79,7 @@ export async function updateProduct(id: string, patch: Partial<ProductInput>, by
   if (patch.categoryId !== undefined) clean.categoryId = patch.categoryId
   if (patch.description !== undefined) clean.description = patch.description
   if (patch.depositCents !== undefined) clean.depositCents = patch.depositCents
+  if (patch.depositRequired !== undefined) clean.depositRequired = patch.depositRequired
   if (patch.defaultFulfillment !== undefined) clean.defaultFulfillment = patch.defaultFulfillment
   if (patch.imageUrl !== undefined) clean.imageUrl = patch.imageUrl
   if (patch.specs !== undefined) clean.specs = patch.specs

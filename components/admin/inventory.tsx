@@ -16,6 +16,7 @@ export type AdminProductView = {
   slug: string
   description: string | null
   depositCents: number
+  depositRequired: boolean
   active: boolean
   imageUrl: string | null
 }
@@ -132,6 +133,7 @@ function ProductForm({ product, onDone }: { product: AdminProductView | null; on
   const [slug, setSlug] = useState(product?.slug ?? '')
   const [description, setDescription] = useState(product?.description ?? '')
   const [deposit, setDeposit] = useState(String(product?.depositCents ?? 0))
+  const [depositRequired, setDepositRequired] = useState(product?.depositRequired ?? false)
   const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? '')
   const [active, setActive] = useState(product?.active ?? true)
   const [busy, setBusy] = useState(false)
@@ -145,6 +147,7 @@ function ProductForm({ product, onDone }: { product: AdminProductView | null; on
       slug,
       description,
       depositCents: Math.round(Number(deposit) || 0),
+      depositRequired,
       imageUrl: imageUrl || null,
       active,
     })
@@ -165,6 +168,9 @@ function ProductForm({ product, onDone }: { product: AdminProductView | null; on
       </div>
       <label className="mt-3 flex items-center gap-2 text-xs font-bold text-[#173b3b]/60">
         <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Visible on storefront
+      </label>
+      <label className="mt-3 flex items-center gap-2 text-sm font-bold text-[#173b3b]/70">
+        <input type="checkbox" checked={depositRequired} onChange={(e) => setDepositRequired(e.target.checked)} /> Require security deposit at checkout (ID document required)
       </label>
       <div className="mt-4"><Notice error={error} /></div>
       <button onClick={submit} disabled={busy} className="mt-2 flex items-center gap-2 rounded-full bg-[#173b3b] px-6 py-3 text-sm font-bold text-white disabled:opacity-50">

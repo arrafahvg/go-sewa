@@ -24,6 +24,7 @@ export default async function InventoryPage() {
     slug: p.slug,
     description: p.description,
     depositCents: p.depositCents,
+    depositRequired: p.depositRequired,
     active: p.active,
     imageUrl: p.imageUrl,
   }))

@@ -131,14 +131,24 @@ a product's price later never mutates historical rentals.
 - Rental agreement generation is live: booking detail → "Generate agreement",
   printable/signature-ready document at `/admin/agreements/[id]`, merged from
   the active template + booking snapshot. Template editing UI is pending.
-- Deposits/late-fees management UI not built (tables + seed data exist); late
-  fees and damage charges already flow onto generated invoices.
+- Deposits & payments (§13, §16): services are live (`lib/services/deposits.ts`,
+  `lib/services/payments.ts` — deposit held/returned/forfeited lifecycle on the
+  `deposits` + `deposit_transactions` tables, payment recording with derived
+  paid status). Still pending: server actions + booking-detail UI to record
+  payments and deposit movements, wiring the new per-product
+  `deposit_required` flag (products table column added in
+  `drizzle/0003_worried_madelyne_pryor.sql` — run `npm run db:push`) into
+  checkout pricing so flagged products force an ID document + deposit hold,
+  and seed data for a living deposit/payment demo.
 - Identity document (KTP/SIM) collateral upload is live: required at online
   checkout and walk-in creation, stored in a private Supabase Storage bucket
   (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ID_DOCS_BUCKET`),
   reviewed via short-lived signed URLs on the admin booking page. Create the
   private bucket once in the Supabase dashboard. Policy is configurable via
   settings `identity_document_required` and `identity_document_types`.
+  Still pending: staff "verify identity" action wired into the admin customer/
+  booking UI (`verifyIdentityDocument` service exists), and enforcement of
+  `hasValidIdDocument()` at check-out time.
 - Storefront search/filter/sort (§10), gallery/specs (§11), delivery form (§15) pending.
 - Booking status automation runs on dashboard load + cron endpoint; a real scheduler
   (e.g. Vercel Cron hitting `/api/cron/overdue`) should be configured in deployment.

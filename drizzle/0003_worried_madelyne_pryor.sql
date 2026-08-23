@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "deposit_required" boolean DEFAULT false NOT NULL;

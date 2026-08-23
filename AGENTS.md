@@ -123,8 +123,8 @@ npm run build        # production build (must pass before finishing)
 | 3 | Availability engine + conflict prevention | ✅ done |
 | 4 | Storefront: home / rent / detail / cart | ✅ core done (search/filter/sort pending §10) |
 | 5 | Checkout + confirmation + WhatsApp | ✅ done — multi-line cart checkout, confirmation, WhatsApp (delivery fields pending §15) |
-| 6 | Admin CRM + check-out/check-in/inspection | 🟡 mostly done — walk-in form, booking detail, device assignment, check-out/in, inspection done; CRM/leads UI pending |
-| 7–9 | Invoices, agreements, maintenance ops | ⏳ schema + seed only; no UI yet |
+| 6 | Admin CRM + check-out/check-in/inspection | 🟡 mostly done — walk-in form, booking detail, device assignment, check-out/in, inspection done; CRM/leads UI pending; per-product `deposit_required` flag editable in inventory, but not yet enforced at checkout |
+| 7–9 | Invoices, agreements, maintenance ops | 🟡 invoices & agreements generation live; deposit/payment services live (`lib/services/deposits.ts`, `payments.ts`) but no actions/UI yet; maintenance ops schema + seed only |
 | 10 | CMS admin | ⏳ schema + seed only |
 | 11 | Tracking architecture | ⏳ schema-ready; never fake data (§80) |
 | 12 | SEO / perf / a11y / tests / i18n | ⏳ pending (ID/EN i18n required §9) |
@@ -141,3 +141,13 @@ A feature is done only when **all** hold:
 - `npx tsc --noEmit` and `npm run build` both pass;
 - nothing from §80's forbidden list exists anywhere in the repo;
 - seed data still produces a living demo after your change.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
