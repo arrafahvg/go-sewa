@@ -134,3 +134,31 @@ export async function deleteTestimonialItem(id: string, byUserId: string): Promi
   await db.delete(testimonials).where(eq(testimonials.id, id))
   await logActivity({ userId: byUserId, action: 'testimonial_deleted', entity: 'testimonials', entityId: id })
 }
+
+/** SEO metadata stored on the `home` cms_pages row (§42). */
+export type HomeSeo = { seoTitle: string; seoDescription: string; noindex: boolean }
+
+export async function getHomeSeo(): Promise<HomeSeo> {
+  const row = (await db.select().from(cmsPages).where(eq(cmsPages.slug, HOME_SLUG)).limit(1))[0]
+  return {
+    seoTitle: row?.seoTitle ?? '',
+    seoDescription: row?.seoDescription ?? '',
+    noindex: row?.noindex ?? false,
+  }
+}
+
+/** Upsert SEO metadata on the home page row (admin, audit-logged). */
+export async function saveHomeSeo(input: HomeSeo, byUserId: string): Promise<void> {
+  const id = await ensureHomeRow()
+  await db.update(cmsPages).set({
+    seoTitle: input.seoTitle.trim() || null,
+    seoDescription: input.seoDescription.trim() || null,
+    noindex: input.noindex,
+    updatedAt: new Date(),
+  }).where(eq(cmsPages.id, id))
+  await logActivity({
+    userId: byUserId, action: 'cms_seo_updated',
+    entity: 'cms_pages', entityId: HOME_SLUG,
+    metadata: { noindex: input.noindex },
+  })
+}

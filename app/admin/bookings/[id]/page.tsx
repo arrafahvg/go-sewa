@@ -10,6 +10,7 @@ import { db } from '@/lib/db'
 import { devices, payments } from '@/lib/db/schema'
 import { inArray } from 'drizzle-orm'
 import BookingOps from '@/components/admin/booking-ops'
+import PricingAdjustPanel from '@/components/admin/pricing-adjust-panel'
 import GenerateInvoiceButton from '@/components/admin/generate-invoice-button'
 import AgreementsPanel from '@/components/admin/agreements-panel'
 import IdentityDocumentsPanel from '@/components/admin/identity-documents-panel'
@@ -98,6 +99,21 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           checkins={detail.checkins.map((c) => ({ condition: c.condition, damageNoted: c.damageNoted, at: c.checkedInAt.toISOString() }))}
           freeDevices={freeDevices.map((d) => ({ id: d.id, assetCode: d.assetCode }))}
         />
+
+        <div className="mt-8">
+          <PricingAdjustPanel
+            bookingId={detail.booking.id}
+            status={detail.booking.status}
+            deliveryFeeCents={detail.booking.deliveryFeeCents}
+            lines={detail.items.map((i) => ({
+              id: i.id,
+              productName: i.productNameSnapshot ?? i.productId,
+              quantity: i.quantity,
+              unitPriceCents: i.unitPriceCents,
+              lineTotalCents: i.lineTotalCents,
+            }))}
+          />
+        </div>
 
         <div className="mt-8 grid gap-4 print:hidden">
           <IdentityDocumentsPanel

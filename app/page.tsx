@@ -4,12 +4,16 @@ import { Star } from 'lucide-react'
 import { getCatalogProducts, getCategories } from '@/lib/data/catalog'
 import { formatMoneyCompact } from '@/lib/utils/money'
 import { getCompanyInfo } from '@/lib/services/settings'
-import { getHomeSections, listFaq, listTestimonials } from '@/lib/services/cms'
+import { getHomeSections, getHomeSeo, listFaq, listTestimonials } from '@/lib/services/cms'
 import type { HomeSection } from '@/lib/types/cms'
 
-export const metadata = {
-  title: 'Go-Sewa — Rent the tech you need',
-  description: 'Premium smartphone, camera, action camera and creator gear rentals in Bali.',
+export async function generateMetadata() {
+  const seo = await getHomeSeo()
+  return {
+    title: seo.seoTitle || 'Go-Sewa — Rent the tech you need',
+    description: seo.seoDescription || 'Premium smartphone, camera, action camera and creator gear rentals in Bali.',
+    ...(seo.noindex ? { robots: { index: false as const, follow: false as const } } : {}),
+  }
 }
 
 export const dynamic = 'force-dynamic'

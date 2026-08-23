@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import {
   checkOutDevice, checkInDevice, recordInspection, assignDevices, updateBookingStatus,
+  adjustBookingPricing,
 } from '@/lib/services/operations'
 import { requireStaff } from '@/lib/services/auth'
 
@@ -70,5 +71,17 @@ export async function updateBookingStatusAction(input: { bookingId: string; stat
   if (!byUserId) return unauthorized()
   const result = await updateBookingStatus({ ...input, byUserId })
   refresh(input.bookingId)
+  return result
+}
+/** Admin-reviewed pricing (§15): adjust delivery fee / line prices pre-confirmation. */
+export async function adjustBookingPricingAction(input: {
+  bookingId: string
+  deliveryFeeCents?: number
+  lines: { itemId: string; unitPriceCents: number }[]
+}) {
+  const byUserId = await staffId()
+  if (!byUserId) return unauthorized()
+  const result = await adjustBookingPricing({ ...input, byUserId })
+  if (result.ok) refresh(input.bookingId)
   return result
 }

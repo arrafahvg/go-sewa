@@ -175,8 +175,18 @@ a product's price later never mutates historical rentals.
   address, recipient name/phone and notes fields, validates them server-side via the
   booking service, applies the configurable `delivery_fee_cents` per booking (shown in
   the price breakdown) and records fulfillment + return method on the booking.
-  Storefront and admin routes ship loading skeletons (§67). Still pending: i18n (§9),
-  cms_pages SEO-metadata editing, and a real scheduler for `/api/cron/overdue`.
+  Storefront and admin routes ship loading skeletons (§67). Still pending: i18n (§9)
+  and a real scheduler for `/api/cron/overdue`.
+- Admin-reviewed pricing (§15, newly documented in the spec): online orders notify all
+  staff in-app via the `notifications` table; while a booking is `pending` /
+  `awaiting_confirmation` an **Adjust pricing** panel on `/admin/bookings/[id]` lets
+  staff set the final delivery fee and per-line prices (server-recomputed totals,
+  audit-logged); amounts freeze after confirmation. Checkout copy states the total is
+  indicative until confirmation.
+- Ops gaps closed: `hasValidIdDocument()` is now enforced at check-out for
+  deposit-required products, and damage resolution supports per-report charge amount,
+  note and optional deposit forfeiture (records `damage_charges` + a `forfeited`
+  transaction). Staff identity verification was already wired in the documents panel.
 - Maintenance & damage ops (§7–9) are live at `/admin/maintenance`: schedule/complete
   maintenance jobs (return device to available on completion) and report/resolve
   damage (writing a `damage_charges` line item when a charge is set). Completing a

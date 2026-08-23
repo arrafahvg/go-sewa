@@ -35,6 +35,10 @@ export default function MaintenanceManager({ jobs, damage, devices }: { jobs: Jo
   const [dDeviceId, setDDeviceId] = useState('')
   const [dSeverity, setDSeverity] = useState('minor')
   const [dDesc, setDDesc] = useState('')
+  // Per-report damage charge entry + deposit forfeiture (§7–9, §13).
+  const [charges, setCharges] = useState<Record<string, string>>({})
+  const [chargeNote, setChargeNote] = useState<Record<string, string>>({})
+  const [forfeits, setForfeits] = useState<Record<string, boolean>>({})
 
   const run = async (key: string, fn: () => Promise<{ ok: boolean; error?: string }>) => {
     setBusy(key); setError('')
@@ -158,7 +162,12 @@ export default function MaintenanceManager({ jobs, damage, devices }: { jobs: Jo
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-[#173b3b]/50">device: {d.deviceStatus}</span>
                     {!d.resolved && (
-                      <button onClick={() => run(`res-${d.id}`, async () => resolveDamageAction({ id: d.id, chargeCents: 0 }))} disabled={busy !== ''}
+                      <button onClick={() => run(`res-${d.id}`, async () => resolveDamageAction({
+                        id: d.id,
+                        chargeCents: Math.round(Number(charges[d.id] ?? '0') * 100),
+                        description: chargeNote[d.id],
+                        forfeitDepositCents: forfeits[d.id] && d.bookingId ? Math.round(Number(charges[d.id] ?? '0') * 100) : 0,
+                      }))} disabled={busy !== ''}
                         className="flex items-center gap-1 rounded-full bg-[#173b3b] px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">
                         {busy === `res-${d.id}` ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={13} />} Resolve
                       </button>
@@ -166,6 +175,24 @@ export default function MaintenanceManager({ jobs, damage, devices }: { jobs: Jo
                   </div>
                 </div>
                 <p className="mt-2 text-sm text-[#173b3b]/70">{d.description}</p>
+                {!d.resolved && (
+                  <div className="mt-3 flex flex-wrap items-end gap-3 rounded-xl bg-[#f7f5ef] px-4 py-3">
+                    <label className="text-xs font-bold text-[#173b3b]/55">
+                      Charge (Rp)
+                      <input type="number" min={0} value={charges[d.id] ?? ''} onChange={(e) => setCharges((c) => ({ ...c, [d.id]: e.target.value }))} placeholder="0" className="mt-1 w-32 rounded-lg border border-[#173b3b]/15 bg-white px-3 py-2 text-sm outline-none focus:border-[#387066]" />
+                    </label>
+                    <label className="min-w-48 flex-1 text-xs font-bold text-[#173b3b]/55">
+                      Charge note (optional)
+                      <input value={chargeNote[d.id] ?? ''} onChange={(e) => setChargeNote((n) => ({ ...n, [d.id]: e.target.value }))} placeholder="e.g. cracked screen" className="mt-1 w-full rounded-lg border border-[#173b3b]/15 bg-white px-3 py-2 text-sm outline-none focus:border-[#387066]" />
+                    </label>
+                    {d.bookingId && (
+                      <label className="flex items-center gap-2 pb-2 text-xs font-bold text-[#173b3b]/70">
+                        <input type="checkbox" checked={forfeits[d.id] ?? false} onChange={(e) => setForfeits((f) => ({ ...f, [d.id]: e.target.checked }))} />
+                        Forfeit from deposit
+                      </label>
+                    )}
+                  </div>
+                )}
                 <p className="mt-1 text-xs text-[#173b3b]/45">{d.bookingId ? 'Linked to a booking · ' : ''}charge {formatMoney(d.chargeCents)}</p>
               </div>
             ))}

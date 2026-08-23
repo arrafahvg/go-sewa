@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import {
   bookings, customers, bookingItems, bookingDeviceAllocations,
   devices, deviceCheckouts, deviceCheckins, inspectionChecklists,
+  products,
 } from '@/lib/db/schema'
 import { pool } from '@/lib/db'
 import { logActivity, uid } from './audit'
@@ -49,6 +50,20 @@ export async function checkOutDevice(input: {
   if (!device) return { ok: false, error: 'Device not found.' }
   if (!['reserved', 'available'].includes(device.status)) {
     return { ok: false, error: `Device ${device.assetCode} is ${device.status}, not available for check-out.` }
+  }
+
+  // Deposit-required products force a verified ID document on file (§19, §2528).
+  const depositItems = await db
+    .select({ depositRequired: products.depositRequired })
+    .from(bookingItems)
+    .innerJoin(products, eq(bookingItems.productId, products.id))
+    .where(eq(bookingItems.bookingId, input.bookingId))
+  const needsIdDoc = depositItems.some((i) => i.depositRequired)
+  if (needsIdDoc && booking.customerId) {
+    const { hasValidIdDocument } = await import('./documents')
+    if (!(await hasValidIdDocument(booking.customerId))) {
+      return { ok: false, error: 'This rental requires a verified ID document (KTP/SIM) on file before check-out.' }
+    }
   }
 
   const client = await pool.connect()
@@ -259,6 +274,55 @@ export async function updateBookingStatus(input: {
   await logActivity({
     userId: input.byUserId ?? null, action: 'booking_status_changed', entity: 'booking', entityId: input.bookingId,
     metadata: { from: booking.status, to: input.status },
+  })
+  return { ok: true }
+}
+
+const PRICING_EDITABLE_STATUSES = ['pending', 'awaiting_confirmation']
+
+/**
+ * Admin-reviewed pricing (spec §15): while an online order awaits confirmation,
+ * staff can adjust the delivery fee and per-line unit prices. Edits update the
+ * booking's stored snapshot values — legitimate because the booking is not yet
+ * historical; §58 protects completed records. Audit-logged (§63). Amounts freeze
+ * after confirmation.
+ */
+export async function adjustBookingPricing(input: {
+  bookingId: string
+  deliveryFeeCents?: number
+  lines: { itemId: string; unitPriceCents: number }[]
+  byUserId?: string | null
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const booking = (await db.select().from(bookings).where(eq(bookings.id, input.bookingId)))[0]
+  if (!booking) return { ok: false, error: 'Booking not found.' }
+  if (!PRICING_EDITABLE_STATUSES.includes(booking.status)) {
+    return { ok: false, error: `Pricing can only be adjusted while the order awaits confirmation (current status: "${booking.status}").` }
+  }
+
+  let rentalSubtotal = 0
+  for (const line of input.lines) {
+    const item = (await db.select().from(bookingItems).where(eq(bookingItems.id, line.itemId)).limit(1))[0]
+    if (!item || item.bookingId !== input.bookingId) continue
+    const unitPrice = Math.max(0, Math.round(line.unitPriceCents))
+    const lineTotal = unitPrice * (item.quantity ?? 1) + (item.addOnCents ?? 0)
+    await db.update(bookingItems)
+      .set({ unitPriceCents: unitPrice, lineTotalCents: lineTotal })
+      .where(eq(bookingItems.id, line.itemId))
+    rentalSubtotal += lineTotal
+  }
+
+  const deliveryFee = Math.max(0, Math.round(input.deliveryFeeCents ?? booking.deliveryFeeCents ?? 0))
+  const discount = booking.discountCents ?? 0
+  const total = Math.max(0, rentalSubtotal + deliveryFee - discount)
+
+  await db.update(bookings)
+    .set({ deliveryFeeCents: deliveryFee, rentalSubtotalCents: rentalSubtotal, totalCents: total, updatedAt: new Date() })
+    .where(eq(bookings.id, input.bookingId))
+
+  await logActivity({
+    userId: input.byUserId ?? null, action: 'booking_pricing_adjusted',
+    entity: 'booking', entityId: input.bookingId,
+    metadata: { deliveryFeeCents: deliveryFee, rentalSubtotalCents: rentalSubtotal, totalCents: total },
   })
   return { ok: true }
 }

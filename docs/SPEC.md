@@ -925,6 +925,25 @@ For delivery:
 
 The admin should be able to manage delivery manually initially.
 
+### Admin-Reviewed Pricing & Delivery Fee
+
+The delivery fee shown at checkout is an **estimate** based on the configurable
+`delivery_fee_cents` setting. The authoritative flow is:
+
+1. The customer submits an order. Online orders are created with status `pending`
+   (§17) — nothing is confirmed and no device is finally allocated to the customer yet.
+2. Staff receive an **in-app notification** ("new online order awaiting review") via
+   the `notifications` table so the order is never silently missed.
+3. While the booking status is `pending` or `awaiting_confirmation`, an admin can
+   **adjust the delivery fee and per-line prices** on the booking detail screen.
+   These edits update that booking's stored snapshot values (booking items, fee) —
+   this is legitimate because the booking is not yet historical (§58 protects only
+   completed/historical records). Every adjustment is audit-logged (§63).
+4. Once staff confirm the booking, amounts freeze: later changes must go through
+   cancellation/re-creation or explicit amendment flows, never silent mutation.
+5. The customer sees the final amount when staff confirm via WhatsApp/phone (§18);
+   checkout copy must make clear that the total is indicative until confirmation.
+
 ---
 
 # 16. PAYMENT ARCHITECTURE

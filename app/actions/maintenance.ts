@@ -80,7 +80,7 @@ export async function reportDamageAction(input: {
   }
 }
 
-export async function resolveDamageAction(input: { id: string; chargeCents?: number; description?: string }): Promise<Result> {
+export async function resolveDamageAction(input: { id: string; chargeCents?: number; description?: string; forfeitDepositCents?: number }): Promise<Result> {
   const staff = await requireStaff()
   if (!staff) return { ok: false, error: 'You need staff permissions to manage damage.' }
   try {
@@ -88,6 +88,7 @@ export async function resolveDamageAction(input: { id: string; chargeCents?: num
       id: input.id,
       chargeCents: input.chargeCents ?? 0,
       description: input.description,
+      forfeitDepositCents: input.forfeitDepositCents,
       byUserId: staff.id,
     })
     refresh()

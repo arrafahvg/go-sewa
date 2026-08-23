@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import HeroEditor from '@/components/admin/hero-editor'
 import FaqEditor from '@/components/admin/faq-editor'
 import TestimonialsEditor from '@/components/admin/testimonials-editor'
-import { getHomeSections, listFaq, listTestimonials } from '@/lib/services/cms'
+import SeoEditor from '@/components/admin/seo-editor'
+import { getHomeSections, getHomeSeo, listFaq, listTestimonials } from '@/lib/services/cms'
 
 export const metadata: Metadata = {
   title: 'Go-Sewa Admin — Content',
@@ -12,8 +13,8 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function ContentPage() {
-  const [sections, faq, testimonials] = await Promise.all([
-    getHomeSections(), listFaq(), listTestimonials(),
+  const [sections, faq, testimonials, seo] = await Promise.all([
+    getHomeSections(), listFaq(), listTestimonials(), getHomeSeo(),
   ])
 
   return (
@@ -30,6 +31,7 @@ export default async function ContentPage() {
           </p>
         </div>
         <HeroEditor sections={sections} />
+        <SeoEditor seo={seo} />
         <FaqEditor items={faq} />
         <TestimonialsEditor items={testimonials} />
       </div>

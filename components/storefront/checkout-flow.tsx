@@ -229,7 +229,7 @@ if (status === 'done' && confirmed) {
                   {status === 'submitting' && <Loader2 size={16} className="animate-spin" />}
                   Submit booking
                 </button>
-                <p className="text-center text-xs text-[#173b3b]/50">We&apos;ll contact you via WhatsApp to confirm your rental booking.</p>
+                <p className="text-center text-xs text-[#173b3b]/50">This total is indicative — we&apos;ll contact you via WhatsApp to confirm the final booking amount.</p>
               </div>
             </div>
           </div>

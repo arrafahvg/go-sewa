@@ -280,6 +280,17 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
         JSON.stringify({ number, starts_at: start.toISOString(), ends_at: end.toISOString(), total: quote.totalCents })],
     )
 
+    // Staff alert for online orders (§15 Admin-Reviewed Pricing) — never silently missed.
+    if (channel === 'online') {
+      await client.query(
+        `INSERT INTO notifications (id, user_id, kind, title, body, read, created_at)
+         SELECT $1 || '-' || u.id, u.id, 'info', $2, $3, false, now()
+         FROM "user" u WHERE u.role IN ('owner','admin','staff')`,
+        [uid(), `New online order ${number}`,
+          `Booking ${number} (${start.toISOString().slice(0, 10)} → ${end.toISOString().slice(0, 10)}) is awaiting review. Adjust pricing/delivery fee if needed, then confirm.`],
+      )
+    }
+
     await client.query('COMMIT')
     return { ok: true, bookingId, number, status: channel === 'in_store' ? 'confirmed' : 'pending' }
   } catch (e: unknown) {

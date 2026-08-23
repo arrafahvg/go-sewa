@@ -162,6 +162,7 @@ export async function resolveDamageReport(input: {
   id: string
   chargeCents?: number
   description?: string
+  forfeitDepositCents?: number
   byUserId?: string | null
 }) {
   const report = (await db.select().from(deviceDamageReports).where(eq(deviceDamageReports.id, input.id)))[0]
@@ -190,6 +191,22 @@ export async function resolveDamageReport(input: {
     throw e
   } finally {
     client.release()
+  }
+
+  // Optionally forfeit part of the held deposit to cover the damage (§13, §16).
+  if ((input.forfeitDepositCents ?? 0) > 0 && report.bookingId) {
+    const { recordDeposit, getDeposit } = await import('./deposits')
+    const deposit = await getDeposit(report.bookingId)
+    if (deposit && deposit.amountCents > 0) {
+      const amount = Math.min(Math.round(input.forfeitDepositCents!), deposit.amountCents)
+      if (amount > 0) {
+        await recordDeposit({
+          bookingId: report.bookingId, kind: 'forfeited', amountCents: amount,
+          note: `Damage charge: ${input.description ?? report.description}`,
+          byUserId: input.byUserId ?? '',
+        })
+      }
+    }
   }
 
   // Reopening the device for rent.
