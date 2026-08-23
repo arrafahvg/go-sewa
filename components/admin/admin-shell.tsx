@@ -31,7 +31,7 @@ export default function AdminShell({
   }, [collapsed])
 
   return (
-    <div className="min-h-screen bg-[#f4f1ea] text-[#173b3b]">
+    <div className="min-h-screen bg-[#f4f1ea] text-[#173b3b] lg:flex">
       {/* Mobile top bar */}
       <div className="sticky top-0 z-40 flex items-center justify-between border-b border-[#173b3b]/10 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
         <Link href="/admin" className="font-serif text-lg font-bold">
@@ -53,7 +53,7 @@ export default function AdminShell({
         <NavContent user={user} collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} onNavigate={() => setMobileOpen(false)} />
       </aside>
 
-      <main className={`min-w-0 transition-[padding] duration-300 ${collapsed ? 'lg:pl-[76px]' : 'lg:pl-[288px]'}`}>
+      <main className="min-w-0">
         {children}
       </main>
     </div>
