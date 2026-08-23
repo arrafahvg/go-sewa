@@ -151,7 +151,11 @@ a product's price later never mutates historical rentals.
   Still pending: staff "verify identity" action wired into the admin customer/
   booking UI (`verifyIdentityDocument` service exists), and enforcement of
   `hasValidIdDocument()` at check-out time.
-- Storefront search/filter/sort (§10), gallery/specs (§11), delivery form (§15) pending.
+- Storefront search/filter/sort (§10, §44, §45) is live on `/rent`: debounced text
+  search across name/description/category/spec values, category chips, daily-price
+  bands, a "no deposit" filter and sort (featured/price/name) — all filtering the
+  server-loaded catalog in-memory (single fetch, no redundant queries). Still pending:
+  gallery/specs display (§11), delivery form (§15).
 - CMS (§42) is live in two admin screens:
   - `/admin/settings` — company profile (business name, **managed logo upload** to
     `/public/uploads/site/` via the storage provider + logo URL fallback, address,

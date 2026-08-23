@@ -1,7 +1,6 @@
 import { getCategories, getCatalogProducts } from '@/lib/data/catalog'
-import { formatMoneyCompact } from '@/lib/utils/money'
 import StorefrontShell from '@/components/storefront/storefront-shell'
-import ProductCard from '@/components/storefront/product-card'
+import RentExplorer from '@/components/storefront/rent-explorer'
 import { getCompanyInfo } from '@/lib/services/settings'
 
 export const metadata = {
@@ -11,9 +10,13 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic'
 
-export default async function RentPage() {
-  const [categories, products, company] = await Promise.all([
-    getCategories(), getCatalogProducts(), getCompanyInfo(),
+export default async function RentPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string; sort?: string }>
+}) {
+  const [{ category }, categories, products, company] = await Promise.all([
+    searchParams, getCategories(), getCatalogProducts(), getCompanyInfo(),
   ])
 
   return (
@@ -27,44 +30,11 @@ export default async function RentPage() {
           Every listed device is a real tracked physical unit — availability updates live from actual rentals.
         </p>
 
-        {/* Category filter */}
-        <div className="mt-10 flex flex-wrap gap-2">
-          <a
-            href="/rent"
-            className="rounded-full bg-[#173b3b] px-4 py-2 text-xs font-bold text-white transition hover:opacity-90"
-          >
-            All
-          </a>
-          {categories.map((c) => (
-            <a
-              key={c.slug}
-              href={`/rent?category=${c.slug}`}
-              className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold text-[#173b3b]/70 transition hover:bg-[#e4eee8]"
-            >
-              {c.nameEn}
-            </a>
-          ))}
-        </div>
-
-        {products.length === 0 ? (
-          <div className="mt-16 rounded-3xl border border-dashed border-[#173b3b]/15 p-10 text-center text-sm text-[#173b3b]/60">
-            No rental devices found yet. Add products in the admin dashboard.
-          </div>
-        ) : (
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((p) => (
-              <ProductCard
-                key={p.id}
-                name={p.name}
-                slug={p.slug}
-                imageUrl={p.imageUrl}
-                category={p.categoryNameEn ?? 'Rental'}
-                price={formatMoneyCompact(p.dailyCents)}
-                deposit={p.depositCents}
-              />
-            ))}
-          </div>
-        )}
+        <RentExplorer
+          products={products}
+          categories={categories}
+          initialCategory={category ?? ''}
+        />
       </div>
     </StorefrontShell>
   )

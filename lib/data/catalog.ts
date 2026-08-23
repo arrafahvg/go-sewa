@@ -14,7 +14,10 @@ export type CatalogProduct = {
   categoryNameId: string | null
   categoryNameEn: string | null
   depositCents: number
+  depositRequired: boolean
   dailyCents: number
+  /** Structured key/value specs (share §44 search across brand/type/spec values). */
+  specs: Record<string, string>
 }
 
 export type CatalogCategory = {
@@ -59,7 +62,9 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
       categoryNameId: c?.nameId ?? null,
       categoryNameEn: c?.nameEn ?? null,
       depositCents: p.depositCents,
+      depositRequired: p.depositRequired,
       dailyCents: await dailyPriceFor(p.id),
+      specs: p.specs ?? {},
     })
   }
   return result
