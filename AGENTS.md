@@ -123,7 +123,7 @@ npm run build        # production build (must pass before finishing)
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 1 | Foundation: schema, auth, settings | ✅ done — incl. RBAC §54 (roles: owner/admin/staff/customer) |
-| 2 | Products + physical devices + pricing rules | ✅ schema/services done; admin CRUD UI pending |
+| 2 | Products + physical devices + pricing rules | ✅ done — schema/services + admin CRUD UI live at `/admin/inventory` (products, devices, per-product pricing rules with snapshots §58) |
 | 3 | Availability engine + conflict prevention | ✅ done |
 | 4 | Storefront: home / rent / detail / cart | ✅ done — search/filter/sort (§10/§44/§45) live on `/rent` (debounced search, category + price-band + deposit filters, sort); gallery + specs display (§11) live on `/rent/[slug]` |
 | 5 | Checkout + confirmation + WhatsApp | ✅ done — multi-line cart checkout, confirmation, WhatsApp, delivery fields (§15), admin-reviewed pricing/delivery-fee adjustment before confirmation with staff notifications (§15) |

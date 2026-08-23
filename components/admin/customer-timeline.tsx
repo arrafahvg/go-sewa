@@ -16,6 +16,17 @@ const LABELS: Record<string, string> = {
   booking_pricing_adjusted: 'Booking pricing adjusted by staff',
 }
 
+const BOOKING_CREATED_LABEL = 'Rental booked'
+function labelFor(action: string): string {
+  if (LABELS[action]) return LABELS[action]
+  // booking_created_<channel> → "Rental booked" (+ channel shown as context)
+  if (/^booking_created_/.test(action)) return BOOKING_CREATED_LABEL
+  return action.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+}
+const CHANNELS: Record<string, string> = {
+  online: 'online checkout', in_store: 'walk-in', phone: 'phone', whatsapp: 'WhatsApp',
+}
+
 function describe(action: string, meta: Record<string, unknown>): string {
   const bits: string[] = []
   if (action === 'booking_status_changed' && typeof meta.from === 'string' && typeof meta.to === 'string') {
@@ -48,8 +59,13 @@ export default function CustomerTimeline({ events }: { events: { id: string; act
               {i < events.length - 1 && <span aria-hidden className="absolute left-[7px] top-4 h-full w-px bg-[#173b3b]/15" />}
               <span className="mt-1.5 size-[15px] shrink-0 rounded-full border-2 border-[#387066] bg-white" />
               <div className="min-w-0 text-sm">
-                <p className="font-bold">{LABELS[e.action] ?? e.action.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())}</p>
-                {(() => { const d = describe(e.action, e.metadata); return d ? <p className="text-xs text-[#173b3b]/60">{d}</p> : null })()}
+                <p className="font-bold">{labelFor(e.action)}</p>
+                {(() => {
+                  const d = describe(e.action, e.metadata)
+                  const channel = /^booking_created_/.test(e.action) ? CHANNELS[e.action.slice('booking_created_'.length)] : undefined
+                  const parts = [d, channel].filter(Boolean) as string[]
+                  return parts.length > 0 ? <p className="text-xs text-[#173b3b]/60">{parts.join(' · ')}</p> : null
+                })()}
                 <p className="text-xs text-[#173b3b]/45">{fmt(e.at)}</p>
                 {e.bookingId && (
                   <Link href={`/admin/bookings/${e.bookingId}`} className="font-mono text-xs font-bold text-[#387066] hover:underline">view booking →</Link>
