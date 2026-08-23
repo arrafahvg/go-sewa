@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, Users, UserPlus, Wrench, ReceiptText,
-  FileText, Settings, ExternalLink, ChevronLeft, ChevronRight, Menu, Store,
+  FileText, Settings, UserRound, ExternalLink, ChevronLeft, ChevronRight, Menu, Store,
 } from 'lucide-react'
 
 const isActive = (pathname: string, href: string) =>
@@ -86,6 +86,7 @@ const GROUPS: Group[] = [
     items: [
       { label: 'Content CMS', href: '/admin/content', icon: FileText },
       { label: 'Settings', href: '/admin/settings', icon: Settings },
+      { label: 'Account settings', href: '/admin/settings/account', icon: UserRound },
     ],
   },
 ]

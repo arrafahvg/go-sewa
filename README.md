@@ -114,13 +114,16 @@ a product's price later never mutates historical rentals.
 | `/rent/[slug]` | Product detail + live availability date picker |
 | `/checkout` | Cart review + booking submission |
 | `/admin` | Admin console (overview, bookings, walk-in new rental, customers) |
+| `/admin/settings/account` | Staff account settings (email, password, sessions) |
 | `/sign-in`, `/sign-up` | Auth |
 
 ## Known limitations / next steps
 
 - i18n strings are not yet extracted into locale files (§9) — biggest remaining gap.
-- Account basics are live at `/account` (change email, change password, session
-  management). "My bookings" is live at `/account/bookings`: online checkouts link
+- Account management lives in the admin console at `/admin/settings/account`
+  (change email, change password, session management); the storefront header no
+  longer exposes a public "My account" entry point (the `/account` routes remain
+  functional for signed-in customers who navigate directly). "My bookings" is live at `/account/bookings`: online checkouts link
   the booking's customer record to the signed-in account (`customers.user_id`),
   and existing customers are auto-linked by exact email match on first visit.
 - Admin CRM/CRM screens are live at `/admin/customers` (customer profiles + their
