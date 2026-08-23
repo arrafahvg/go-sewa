@@ -1742,6 +1742,39 @@ restricted
 
 These flags must be protected from public access.
 
+# 31B. CUSTOMER DETAIL VIEW (CRM)
+
+The customer list (`/admin/customers`) must not be a dead end or a static card
+list (see §80). Every customer name/row in the list is clickable and opens the
+customer detail page `/admin/customers/[id]`.
+
+The detail page must show, all read from the database (§81):
+
+- Profile header: full name, WhatsApp number, email, address, ID type and
+  masked ID number, identity verification status (§52: label text, not color
+  alone), tags, customer-since date.
+- Lifetime stats: total bookings, active rentals, total spending, last rental.
+- Identity documents on file (from `customer_documents`): staff open them via
+  short-lived signed URLs only — never public links; verification action here
+  is audit-logged (§63).
+- Full rental history: every booking with dates, item snapshots (§58), status,
+  total — each linking to its booking detail — plus deep links to that
+  booking's generated invoice and rental agreement when they exist.
+- Editable contact details: an "Edit details" action allowing staff to update
+  name, phone/WhatsApp, email, address and internal notes through a guarded
+  server action with server-side validation and an audit-log entry (§54, §59,
+  §63). Internal notes are never shown to customers.
+- A WhatsApp quick-contact button using the customer's stored number so staff
+  can reach them directly (§18, §34).
+
+The detail page renders the §32 customer activity timeline: every audit-log
+entry for this customer and their bookings, newest first, with human-readable
+labels, metadata context (status transitions, damage noted, device counts,
+edited fields) and links to the affected booking.
+
+Empty states are explicit: no bookings yet / no document on file. The detail
+page never invents data (§80).
+
 ---
 
 # 32. CUSTOMER TIMELINE

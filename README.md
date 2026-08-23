@@ -128,7 +128,13 @@ a product's price later never mutates historical rentals.
   and existing customers are auto-linked by exact email match on first visit.
 - Admin CRM/CRM screens are live at `/admin/customers` (customer profiles + their
   rental history) and `/admin/leads` (create, filter by status, convert to a
-  customer). Booking detail `/admin/bookings/[id]` includes handover + deposit
+  customer). Every customer in the list opens a detail page at
+  `/admin/customers/[id]` (spec §31B): lifetime stats, ID-document viewer via
+  short-lived signed URLs, per-booking invoice/agreement deep links, WhatsApp
+  quick-contact, and staff-only inline editing of contact details (audited).
+   The detail page also renders the §32 customer activity timeline built from
+   audit-log entries.
+  Booking detail `/admin/bookings/[id]` includes handover + deposit
   & payment recording. Product/device/pricing CRUD UI is built at
   `/admin/inventory`.
 - Invoice generation is live: booking detail → "Generate invoice", printable

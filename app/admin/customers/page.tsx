@@ -46,12 +46,13 @@ export default async function CustomersPage() {
             <div key={c.id} className="border-b border-[#173b3b]/8 p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <p className="font-bold">{c.name}</p>
+                  <Link href={`/admin/customers/${c.id}`} className="font-bold text-[#173b3b] underline-offset-2 hover:text-[#387066] hover:underline">{c.name}</Link>
                   <p className="text-xs text-[#173b3b]/55">{c.phone ?? 'No phone'}{c.phone && c.email ? ' · ' : ''}{c.email ?? ''}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   {c.idVerified && <span className="rounded-full bg-[#e4eee8] px-2.5 py-1 text-[11px] font-bold text-[#27604a]">ID verified</span>}
                   <span className="rounded-full bg-[#f1eee7] px-2.5 py-1 text-[11px] font-bold text-[#173b3b]/60">{c.bookingCount} booking(s)</span>
+                  <Link href={`/admin/customers/${c.id}`} className="rounded-full bg-[#173b3b] px-3 py-1.5 text-[11px] font-bold text-white hover:brightness-110">Open profile</Link>
                 </div>
               </div>
               {c.bookings.length > 0 && (
