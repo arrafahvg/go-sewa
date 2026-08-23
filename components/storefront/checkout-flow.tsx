@@ -10,12 +10,17 @@ import { formatMoney } from '@/lib/utils/money'
 
 type AddOn = { id: string; nameEn: string; centsPerDay: number }
 
-export default function CheckoutFlow({ addOns, whatsapp = '628123456789' }: { addOns: AddOn[]; whatsapp?: string }) {
+export default function CheckoutFlow({ addOns, whatsapp = '628123456789', deliveryFeeCents = 0 }: { addOns: AddOn[]; whatsapp?: string; deliveryFeeCents?: number }) {
   const router = useRouter()
   const [lines, setLines] = useState<CartLine[]>([])
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [fulfillment, setFulfillment] = useState<'pickup' | 'delivery'>('pickup')
+  const [deliveryAddress, setDeliveryAddress] = useState('')
+  const [recipientName, setRecipientName] = useState('')
+  const [recipientPhone, setRecipientPhone] = useState('')
+  const [deliveryNotes, setDeliveryNotes] = useState('')
   const [agreed, setAgreed] = useState(false)
   const [status, setStatus] = useState<'idle' | 'submitting' | 'error' | 'done'>('idle')
   const [error, setError] = useState('')
@@ -24,16 +29,20 @@ export default function CheckoutFlow({ addOns, whatsapp = '628123456789' }: { ad
 
   useEffect(() => { setLines(loadCart()) }, [])
 
+  // Each rental period becomes one booking; delivery fee is charged per booking (§15).
   const totals = useMemo(() => {
     let rental = 0
     let deposit = 0
+    const periods = new Set<string>()
     for (const l of lines) {
       const days = totalRentalDays(l.startsAt, l.endsAt)
       rental += l.dailyCents * days * l.quantity
       deposit += l.depositCents * l.quantity
+      periods.add(`${l.startsAt}|${l.endsAt}`)
     }
-    return { rental, deposit, due: rental + deposit }
-  }, [lines])
+    const deliveryFee = fulfillment === 'delivery' && lines.length > 0 ? deliveryFeeCents * periods.size : 0
+    return { rental, deposit, deliveryFee, due: rental + deposit + deliveryFee }
+  }, [lines, fulfillment, deliveryFeeCents])
 
   const remove = (id: string) => {
     const next = lines.filter((l) => l.id !== id)
@@ -44,6 +53,11 @@ export default function CheckoutFlow({ addOns, whatsapp = '628123456789' }: { ad
   const submit = async () => {
     if (!name.trim()) { setError('Please enter your full name.'); return }
     if (!identityDoc) { setError('Please upload your KTP or driver\'s licence photo — it is required as rental collateral.'); return }
+    if (fulfillment === 'delivery') {
+      if (!deliveryAddress.trim()) { setError('Please enter the delivery address.'); return }
+      if (!recipientName.trim()) { setError('Please enter the recipient name for delivery.'); return }
+      if (!recipientPhone.trim()) { setError('Please enter the recipient WhatsApp/phone number.'); return }
+    }
     if (!lines.length) return
     setStatus('submitting')
     setError('')
@@ -64,7 +78,12 @@ export default function CheckoutFlow({ addOns, whatsapp = '628123456789' }: { ad
           customerName: name.trim(), customerPhone: phone.trim(), customerEmail: email.trim(),
           items: groupLines.map((l) => ({ productId: l.productId, quantity: l.quantity, addOnIds: l.addOnIds })),
           startsAt: groupLines[0].startsAt, endsAt: groupLines[0].endsAt,
-          fulfillment: 'pickup', returnMethod: 'return_to_location',
+          fulfillment, returnMethod: fulfillment === 'delivery' ? 'we_pick_up' : 'return_to_location',
+          deliveryAddress: fulfillment === 'delivery' ? deliveryAddress.trim() : undefined,
+          recipientName: fulfillment === 'delivery' ? recipientName.trim() : undefined,
+          recipientPhone: fulfillment === 'delivery' ? recipientPhone.trim() : undefined,
+          deliveryNotes: fulfillment === 'delivery' ? deliveryNotes.trim() : undefined,
+          deliveryFeeCents: fulfillment === 'delivery' ? deliveryFeeCents : 0,
           agreementAccepted: agreed,
           identityDocumentId: identityDoc.documentId,
           customerId: identityDoc.customerId,
@@ -151,6 +170,42 @@ if (status === 'done' && confirmed) {
                 </label>
 
                 <div className="border-t border-[#173b3b]/10 pt-4">
+                  <p className="text-xs font-bold text-[#173b3b]/55">Pickup or delivery</p>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <button type="button" onClick={() => setFulfillment('pickup')} className={`rounded-xl border-2 px-4 py-3 text-left transition ${fulfillment === 'pickup' ? 'border-[#e76f51] bg-[#fff4f0]' : 'border-[#173b3b]/12 bg-[#f7f5ef] hover:border-[#173b3b]/25'}`}>
+                      <span className="block text-sm font-bold">Pickup</span>
+                      <span className="block text-xs text-[#173b3b]/55">Free · our studio</span>
+                    </button>
+                    <button type="button" onClick={() => setFulfillment('delivery')} className={`rounded-xl border-2 px-4 py-3 text-left transition ${fulfillment === 'delivery' ? 'border-[#e76f51] bg-[#fff4f0]' : 'border-[#173b3b]/12 bg-[#f7f5ef] hover:border-[#173b3b]/25'}`}>
+                      <span className="block text-sm font-bold">Delivery</span>
+                      <span className="block text-xs text-[#173b3b]/55">{deliveryFeeCents > 0 ? `${formatMoney(deliveryFeeCents)} per booking` : 'Free'}</span>
+                    </button>
+                  </div>
+
+                  {fulfillment === 'delivery' && (
+                    <div className="mt-4 space-y-3 rounded-xl bg-[#faf8f2] p-4">
+                      <label className="block text-xs font-bold text-[#173b3b]/55">Delivery address
+                        <textarea rows={2} value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} placeholder="Villa / hotel name, street, area (e.g. Seminyak)" className="mt-2 w-full rounded-xl border border-[#173b3b]/12 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-[#e76f51]" />
+                      </label>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block text-xs font-bold text-[#173b3b]/55">Recipient name
+                          <input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder="Who receives the device" className="mt-2 w-full rounded-xl border border-[#173b3b]/12 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-[#e76f51]" />
+                        </label>
+                        <label className="block text-xs font-bold text-[#173b3b]/55">Recipient WhatsApp
+                          <input value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)} placeholder="+62 812 ..." className="mt-2 w-full rounded-xl border border-[#173b3b]/12 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-[#e76f51]" />
+                        </label>
+                      </div>
+                      <label className="block text-xs font-bold text-[#173b3b]/55">Delivery notes (optional)
+                        <input value={deliveryNotes} onChange={(e) => setDeliveryNotes(e.target.value)} placeholder="Gate code, landmark, preferred time…" className="mt-2 w-full rounded-xl border border-[#173b3b]/12 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-[#e76f51]" />
+                      </label>
+                      {deliveryFeeCents > 0 && (
+                        <p className="text-xs text-[#173b3b]/55">A delivery fee of {formatMoney(deliveryFeeCents)} applies per booking (each rental period is one booking).</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-[#173b3b]/10 pt-4">
                   <IdentityDocumentUpload customerName={name} customerPhone={phone} onUploaded={setIdentityDoc} />
                 </div>
 
@@ -162,6 +217,9 @@ if (status === 'done' && confirmed) {
                 <div className="space-y-2 border-t border-[#173b3b]/10 pt-4 text-sm">
                   <div className="flex justify-between"><span className="text-[#173b3b]/60">Rental fee</span><strong>{formatMoney(totals.rental)}</strong></div>
                   <div className="flex justify-between"><span className="text-[#173b3b]/60">Deposit (refundable)</span><strong>{formatMoney(totals.deposit)}</strong></div>
+                  {totals.deliveryFee > 0 && (
+                    <div className="flex justify-between"><span className="text-[#173b3b]/60">Delivery fee</span><strong>{formatMoney(totals.deliveryFee)}</strong></div>
+                  )}
                   <div className="flex justify-between border-t border-[#173b3b]/10 pt-2"><span className="font-bold">Total due before rental</span><span className="font-bold">{formatMoney(totals.due)}</span></div>
                 </div>
 

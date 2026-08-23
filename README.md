@@ -166,9 +166,15 @@ a product's price later never mutates historical rentals.
     (add/edit/hide/delete) and testimonials (add/edit/hide/delete/rating), all stored as
     structured data (`cms_pages.sections` JSONB + `faq`/`testimonials` tables) and
     rendered on the home page. Every write is staff-gated (§54) and audit-logged (§63).
-  The admin console uses a sticky multi-level sidebar (`components/admin/admin-sidebar.tsx`,
-  §43): Overview + collapsible Catalog / Customers / Operations / Site groups, active-page
-  highlighting, rendered from the shared admin layout.
+  The admin console uses a sticky multi-level sidebar (`components/admin/admin-shell.tsx`,
+  §43): Overview plus collapsible Catalog / Customers / Operations / Site groups, with
+  active-page highlighting, a collapse-to-icon-rail toggle (preference persisted in
+  localStorage, hover flyouts keep groups navigable when collapsed), a dark gradient
+  design, and an off-canvas drawer + top bar on mobile.
+- Checkout delivery (§15) is live: pickup/delivery toggle; choosing delivery reveals
+  address, recipient name/phone and notes fields, validates them server-side via the
+  booking service, applies the configurable `delivery_fee_cents` per booking (shown in
+  the price breakdown) and records fulfillment + return method on the booking.
   Storefront and admin routes ship loading skeletons (§67). Still pending: i18n (§9),
   cms_pages SEO-metadata editing, and a real scheduler for `/api/cron/overdue`.
 - Maintenance & damage ops (§7–9) are live at `/admin/maintenance`: schedule/complete

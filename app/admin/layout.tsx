@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getCurrentUser, isStaff } from '@/lib/services/auth'
-import AdminSidebar from '@/components/admin/admin-sidebar'
+import AdminShell from '@/components/admin/admin-shell'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const current = await getCurrentUser()
@@ -20,9 +20,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     )
   }
   return (
-    <div className="flex min-h-screen bg-[#f4f1ea] text-[#173b3b]">
-      <AdminSidebar user={{ name: current.name, role: current.role }} />
-      <main className="min-w-0 flex-1">{children}</main>
-    </div>
+    <AdminShell user={{ name: current.name, role: current.role }}>
+      {children}
+    </AdminShell>
   )
 }
