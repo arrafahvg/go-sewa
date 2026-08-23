@@ -1,6 +1,7 @@
 import { mkdir, writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
-import { createHash, randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Storage provider interface.
@@ -143,6 +144,65 @@ export class LocalStorageProvider implements StorageProvider {
   }
 }
 
+
+/**
+ * Supabase Storage adapter (public bucket).
+ *
+ * Used automatically when SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set.
+ * The bucket must exist and be PUBLIC so uploaded URLs are directly renderable;
+ * create it once in the Supabase dashboard or via SQL:
+ *   insert into storage.buckets (id, name, public) values ('product-assets', 'product-assets', true);
+ * Configure via SUPABASE_PUBLIC_BUCKET (default: 'product-assets').
+ *
+ * Note: this is intentionally separate from the PRIVATE identity-document bucket
+ * handled in lib/services/documents.ts - collateral photos must never be public.
+ */
+export class SupabaseStorageProvider implements StorageProvider {
+  private client: SupabaseClient;
+  private bucket: string;
+
+  constructor(url: string, serviceKey: string, bucket: string = 'product-assets') {
+    this.client = createClient(url, serviceKey, { auth: { persistSession: false } });
+    this.bucket = bucket;
+  }
+
+  async uploadFile(fileBuffer: Buffer, options: {
+    originalName?: string;
+    mimeType?: string;
+    folder?: string;
+  }): Promise<{ url: string; path: string; metadata?: Record<string, any> }> {
+    const ext = options.originalName && options.originalName.includes('.') ? '.' + options.originalName.split('.').pop() : '';
+    const fileName = Date.now() + '-' + randomUUID() + ext;
+    const path = options.folder ? options.folder + '/' + fileName : fileName;
+    const { error } = await this.client.storage.from(this.bucket).upload(path, fileBuffer, {
+      contentType: options.mimeType ?? 'application/octet-stream',
+      upsert: false,
+    });
+    if (error) throw new Error('File upload failed: ' + error.message);
+    const { data } = this.client.storage.from(this.bucket).getPublicUrl(path);
+    return {
+      url: data.publicUrl,
+      path,
+      metadata: {
+        originalName: options.originalName,
+        mimeType: options.mimeType,
+        size: fileBuffer.length,
+        uploadedAt: new Date().toISOString(),
+        bucket: this.bucket,
+      },
+    };
+  }
+
+  async getFileUrl(path: string): Promise<string> {
+    const { data } = this.client.storage.from(this.bucket).getPublicUrl(path);
+    return data.publicUrl;
+  }
+
+  async deleteFile(path: string): Promise<void> {
+    const { error } = await this.client.storage.from(this.bucket).remove([path]);
+    if (error) throw new Error('File deletion failed: ' + error.message);
+  }
+}
 /**
  * Factory function to get the current storage provider.
  * In the future, this can be configured via environment variables or settings.
@@ -154,8 +214,12 @@ export class LocalStorageProvider implements StorageProvider {
  * 3. Ensure required configuration (bucket name, credentials, etc.) is available
  */
 export function getStorageProvider(): StorageProvider {
-  // For now, always use local storage
-  // In the future, check process.env.STORAGE_PROVIDER or settings from DB
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (url && key) {
+    return new SupabaseStorageProvider(url, key, process.env.SUPABASE_PUBLIC_BUCKET ?? 'product-assets');
+  }
+  // Fallback for local development without cloud credentials.
   return new LocalStorageProvider();
 }
 

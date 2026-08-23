@@ -116,7 +116,7 @@ export async function saveDeviceAction(input: {
 }
 
 const ALLOWED_IMAGE_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // 5 MB
+const MAX_IMAGE_BYTES = 50 * 1024 * 1024 // 50 MB
 
 /**
  * Managed product image upload. Staff-only. Validates the file server-side
@@ -133,7 +133,7 @@ export async function uploadProductImageAction(input: { fileBase64: string; mime
     }
     const bytes = Buffer.from(input.fileBase64, 'base64')
     if (bytes.length === 0) return { ok: false, error: 'The file is empty.' }
-    if (bytes.length > MAX_IMAGE_BYTES) return { ok: false, error: 'The image must be under 5 MB.' }
+    if (bytes.length > MAX_IMAGE_BYTES) return { ok: false, error: 'The image must be under 50 MB.' }
 
     const ext = input.mimeType === 'image/png' ? 'png'
       : input.mimeType === 'image/webp' ? 'webp'

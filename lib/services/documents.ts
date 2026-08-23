@@ -19,7 +19,7 @@ export const IDENTITY_TYPES = ['ktp', 'sim', 'passport'] as const
 export type IdentityType = (typeof IDENTITY_TYPES)[number]
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
-const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
+const MAX_BYTES = 50 * 1024 * 1024 // 50 MB
 
 function storageConfig(): { url: string; key: string; bucket: string } | null {
   const url = process.env.SUPABASE_URL
@@ -55,7 +55,7 @@ export async function uploadIdentityDocument(input: UploadIdentityInput): Promis
   }
   const bytes = Buffer.from(input.fileBase64, 'base64')
   if (bytes.length === 0) return { ok: false, error: 'The document photo is empty.' }
-  if (bytes.length > MAX_BYTES) return { ok: false, error: 'The document photo must be under 5 MB.' }
+  if (bytes.length > MAX_BYTES) return { ok: false, error: 'The document photo must be under 50 MB.' }
 
   // Resolve or create the customer record (same reuse rule as bookings: phone first).
   let customerId = input.customerId ?? null

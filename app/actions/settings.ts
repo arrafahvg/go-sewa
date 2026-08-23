@@ -33,7 +33,7 @@ export async function updateSettingsAction(updates: Record<string, string>): Pro
 }
 
 const ALLOWED_LOGO_MIME = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif']
-const MAX_LOGO_BYTES = 2 * 1024 * 1024 // 2 MB
+const MAX_LOGO_BYTES = 50 * 1024 * 1024 // 50 MB
 
 /**
  * Managed logo upload (§42). Staff-only. Validates the file server-side, stores
@@ -49,7 +49,7 @@ export async function uploadLogoAction(input: { fileBase64: string; mimeType: st
     }
     const bytes = Buffer.from(input.fileBase64, 'base64')
     if (bytes.length === 0) return { ok: false, error: 'The file is empty.' }
-    if (bytes.length > MAX_LOGO_BYTES) return { ok: false, error: 'The logo must be under 2 MB.' }
+    if (bytes.length > MAX_LOGO_BYTES) return { ok: false, error: 'The logo must be under 50 MB.' }
 
     const ext = input.mimeType === 'image/png' ? 'png'
       : input.mimeType === 'image/jpeg' ? 'jpg'
