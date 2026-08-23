@@ -154,8 +154,9 @@ a product's price later never mutates historical rentals.
 - Storefront search/filter/sort (§10, §44, §45) is live on `/rent`: debounced text
   search across name/description/category/spec values, category chips, daily-price
   bands, a "no deposit" filter and sort (featured/price/name) — all filtering the
-  server-loaded catalog in-memory (single fetch, no redundant queries). Still pending:
-  gallery/specs display (§11), delivery form (§15).
+  server-loaded catalog in-memory (single fetch, no redundant queries). Gallery +
+  specs (§11) are live on `/rent/[slug]` — thumbnail gallery over `products.gallery`
+  and a structured spec table from `products.specs`. Still pending: delivery form (§15).
 - CMS (§42) is live in two admin screens:
   - `/admin/settings` — company profile (business name, **managed logo upload** to
     `/public/uploads/site/` via the storage provider + logo URL fallback, address,
@@ -165,6 +166,9 @@ a product's price later never mutates historical rentals.
     (add/edit/hide/delete) and testimonials (add/edit/hide/delete/rating), all stored as
     structured data (`cms_pages.sections` JSONB + `faq`/`testimonials` tables) and
     rendered on the home page. Every write is staff-gated (§54) and audit-logged (§63).
+  The admin console uses a sticky multi-level sidebar (`components/admin/admin-sidebar.tsx`,
+  §43): Overview + collapsible Catalog / Customers / Operations / Site groups, active-page
+  highlighting, rendered from the shared admin layout.
   Storefront and admin routes ship loading skeletons (§67). Still pending: i18n (§9),
   cms_pages SEO-metadata editing, and a real scheduler for `/api/cron/overdue`.
 - Maintenance & damage ops (§7–9) are live at `/admin/maintenance`: schedule/complete

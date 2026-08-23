@@ -16,6 +16,7 @@ export default function ProductDetail({ product, addOns, whatsapp = '62812345678
   const [end, setEnd] = useState(addDaysStr(3))
   const [quantity, setQuantity] = useState(1)
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([])
+  const [activeImage, setActiveImage] = useState(0)
   const [state, setState] = useState<{ phase: 'idle' | 'loading' | 'ok' | 'error'; message?: string; available?: number; total?: number; quote?: any }>({ phase: 'idle' })
 
   useEffect(() => {
@@ -52,12 +53,29 @@ export default function ProductDetail({ product, addOns, whatsapp = '62812345678
   return (
     <div className="mx-auto max-w-7xl px-5 pb-24 pt-8 lg:px-8">
       <div className="grid gap-10 lg:grid-cols-2">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-[#e4eee8]">
-          {product.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center font-serif text-3xl font-bold text-[#173b3b]/30">{product.name}</div>
+        <div>
+          <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-[#e4eee8]">
+            {(product.gallery[activeImage] ?? product.imageUrl) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={product.gallery[activeImage] ?? product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center font-serif text-3xl font-bold text-[#173b3b]/30">{product.name}</div>
+            )}
+          </div>
+          {product.gallery.length > 1 && (
+            <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
+              {product.gallery.map((url, i) => (
+                <button
+                  key={`${url}-${i}`}
+                  onClick={() => setActiveImage(i)}
+                  aria-label={`Show photo ${i + 1} of ${product.name}`}
+                  className={`h-16 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition ${i === activeImage ? 'border-[#e76f51]' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
@@ -67,6 +85,20 @@ export default function ProductDetail({ product, addOns, whatsapp = '62812345678
             <h1 className="mt-2 font-serif text-4xl tracking-tight">{product.name}</h1>
             <p className="mt-3 text-sm leading-6 text-[#173b3b]/60">{product.description}</p>
           </div>
+
+          {Object.keys(product.specs ?? {}).length > 0 && (
+            <div className="rounded-2xl border border-[#173b3b]/10 bg-white p-5">
+              <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">Specifications</p>
+              <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                {Object.entries(product.specs).map(([k, v]) => (
+                  <div key={k} className="flex justify-between gap-4 border-b border-[#173b3b]/8 pb-2 text-sm">
+                    <dt className="text-[#173b3b]/55">{k}</dt>
+                    <dd className="text-right font-semibold">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
 
           <div className="flex items-end gap-6">
             <div>

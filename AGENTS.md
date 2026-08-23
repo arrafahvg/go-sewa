@@ -125,7 +125,7 @@ npm run build        # production build (must pass before finishing)
 | 1 | Foundation: schema, auth, settings | ✅ done — incl. RBAC §54 (roles: owner/admin/staff/customer) |
 | 2 | Products + physical devices + pricing rules | ✅ schema/services done; admin CRUD UI pending |
 | 3 | Availability engine + conflict prevention | ✅ done |
-| 4 | Storefront: home / rent / detail / cart | ✅ done — search/filter/sort (§10/§44/§45) live on `/rent` (debounced search, category + price-band + deposit filters, sort); gallery/specs display (§11) pending |
+| 4 | Storefront: home / rent / detail / cart | ✅ done — search/filter/sort (§10/§44/§45) live on `/rent` (debounced search, category + price-band + deposit filters, sort); gallery + specs display (§11) live on `/rent/[slug]` |
 | 5 | Checkout + confirmation + WhatsApp | ✅ done — multi-line cart checkout, confirmation, WhatsApp (delivery fields pending §15) |
 | 6 | Admin CRM + check-out/check-in/inspection | ✅ CRM (customers + leads), walk-in form, booking detail (device assignment, check-out/in, inspection, deposit & payment recording) done. Per-product `deposit_required` flag editable in inventory AND enforced at checkout (forces ID document + deposit hold) |
 | 7–9 | Invoices, agreements, deposits, maintenance ops | 🟡 invoices & agreements generation live; deposit/payment actions + UI live (`app/actions/deposits.ts`, `app/actions/payments.ts`, `components/admin/deposit-payment-panel.tsx`); maintenance + damage admin UI live (`/admin/maintenance`, `app/actions/maintenance.ts`, `lib/services/devices.ts` — schedule/complete jobs, report/resolve damage writing `damage_charges`). Damage-charge amount entry + deposit-forfeit wiring still pending |

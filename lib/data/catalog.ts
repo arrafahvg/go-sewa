@@ -18,6 +18,8 @@ export type CatalogProduct = {
   dailyCents: number
   /** Structured key/value specs (share §44 search across brand/type/spec values). */
   specs: Record<string, string>
+  /** Product gallery images (§11); first entry mirrors imageUrl when set. */
+  gallery: string[]
 }
 
 export type CatalogCategory = {
@@ -65,6 +67,7 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
       depositRequired: p.depositRequired,
       dailyCents: await dailyPriceFor(p.id),
       specs: p.specs ?? {},
+      gallery: [p.imageUrl, ...(p.gallery ?? [])].filter((u): u is string => !!u),
     })
   }
   return result

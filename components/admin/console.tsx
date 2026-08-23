@@ -25,16 +25,9 @@ export default function AdminConsole({ bookings, customers, products }: { bookin
     <div className="min-h-screen bg-[#f4f1ea] text-[#173b3b]">
       <header className="border-b border-[#173b3b]/10 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <p className="font-serif text-xl font-bold">go<span className="text-[#e76f51]">—</span>sewa <span className="ml-1 text-sm font-normal text-[#173b3b]/50">/ admin</span></p>
+          <p className="font-serif text-xl font-bold">Operations console</p>
           <nav className="flex items-center gap-3">
-            <Link href="/admin/inventory" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Inventory</Link>
-            <Link href="/admin/customers" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Customers</Link>
-            <Link href="/admin/leads" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Leads</Link>
-            <Link href="/admin/maintenance" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Maintenance</Link>
-            <Link href="/admin/invoices" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Invoices</Link>
-            <Link href="/admin/settings" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Settings</Link>
-            <Link href="/admin/content" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Content</Link>
-            <a href="/" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">View storefront</a>
+            <Link href="/admin/inventory" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">+ New product</Link>
           </nav>
         </div>
       </header>
