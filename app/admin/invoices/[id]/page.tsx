@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import InvoiceActions from '@/components/admin/invoice-actions'
 import DocumentActions from '@/components/admin/document-actions'
 import { getInvoiceDetail } from '@/lib/services/invoices'
+import { getActiveTemplateFields } from '@/lib/services/templates'
 import { formatMoney } from '@/lib/utils/money'
 
 export const metadata: Metadata = { title: 'Invoice — Go-Sewa Admin' }
@@ -11,7 +12,10 @@ export const dynamic = 'force-dynamic'
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const detail = await getInvoiceDetail(id)
+  const [detail, template] = await Promise.all([
+    getInvoiceDetail(id),
+    getActiveTemplateFields('invoice'),
+  ])
   if (!detail) notFound()
   const { invoice, booking, customer, items, devices, lateFees, damageCharges } = detail
 
@@ -52,6 +56,11 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
               {invoice.dueAt && <p className="text-xs text-[#173b3b]/55">Due {invoice.dueAt.toLocaleDateString()}</p>}
             </div>
           </header>
+
+          {/* Template-driven intro line (§21B) — editable at /admin/templates */}
+          {template.fields.introLine.trim() && (
+            <p className="border-b border-[#173b3b]/8 pb-4 pt-4 text-sm italic text-[#173b3b]/60">{template.fields.introLine}</p>
+          )}
 
           <section className="grid gap-6 py-6 sm:grid-cols-2">
             <div>
@@ -95,6 +104,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             discountReason={booking?.discountReason ?? null}
             depositCents={booking?.depositCents ?? 0}
             totalCents={invoice.totalCents}
+            footerNote={template.fields.footerNote.trim()}
           />
         </article>
       </div>
@@ -104,7 +114,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
 
 type Line = { id: string; name: string; isAddOn: boolean; ruleLabel: string | null; quantity: number; unitPriceCents: number; lineTotalCents: number }
 
-function InvoiceLines({ items, devices, lateFees, damageCharges, subtotalCents, deliveryFeeCents, discountCents, discountReason, depositCents, totalCents }: {
+function InvoiceLines({ items, devices, lateFees, damageCharges, subtotalCents, deliveryFeeCents, discountCents, discountReason, depositCents, totalCents, footerNote }: {
   items: Line[]
   devices: { assetCode: string; imei: string | null }[]
   lateFees: { id: string; daysLate: number; amountCents: number }[]
@@ -115,6 +125,7 @@ function InvoiceLines({ items, devices, lateFees, damageCharges, subtotalCents, 
   discountReason: string | null
   depositCents: number
   totalCents: number
+  footerNote: string
 }) {
   return (
     <>
@@ -173,8 +184,8 @@ function InvoiceLines({ items, devices, lateFees, damageCharges, subtotalCents, 
         )}
       </section>
 
-      <footer className="mt-8 border-t border-[#173b3b]/15 pt-4 text-xs leading-5 text-[#173b3b]/55 print:hidden">
-        <p>Late returns are charged per additional day at the applicable daily rate. Damage or loss beyond normal wear is charged at repair/replacement cost. The deposit covers these charges; any remainder is refunded after inspection.</p>
+      <footer className="mt-8 border-t border-[#173b3b]/15 pt-4 text-xs leading-5 text-[#173b3b]/55">
+        <p>{footerNote || 'Late returns are charged per additional day at the applicable daily rate. Damage or loss beyond normal wear is charged at repair/replacement cost. The deposit covers these charges; any remainder is refunded after inspection.'}</p>
         <p className="mt-2">Thank you for renting with Go-Sewa. Questions? Chat with us on WhatsApp.</p>
       </footer>
     </>

@@ -107,8 +107,8 @@ function NavContent({ user, collapsed, onToggle, onNavigate }: {
     <div className="flex h-full flex-col">
       <div className={`flex items-center border-b border-white/10 ${collapsed ? 'h-16 justify-center px-2' : 'justify-between px-5 py-4'}`}>
         {collapsed ? (
-          <Link href="/admin" aria-label="Go-Sewa admin" className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 font-serif text-lg font-bold">
-            g<span className="text-[#ff8a65]">—</span>s
+          <Link href="/admin" aria-label="Go-Sewa admin" title="Go-Sewa admin" className="font-serif text-base font-bold leading-none text-white">
+            g<span className="text-[#ff8a65]">–</span>s
           </Link>
         ) : (
           <Link href="/admin" className="font-serif text-xl font-bold">
@@ -123,26 +123,24 @@ function NavContent({ user, collapsed, onToggle, onNavigate }: {
         )}
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto py-4 px-3">
+      <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-4 ${collapsed ? 'flex flex-col items-center space-y-0.5 px-2' : 'space-y-1 px-3'}`}>
         {TOP_ITEMS.map((item) => (
           <NavLink key={item.href} item={item} active={active(item.href)} collapsed={collapsed} onNavigate={onNavigate} />
         ))}
         {GROUPS.map((group) => {
           const groupActive = group.items.some((i) => active(i.href))
           if (collapsed) {
+            // Rail mode: every link renders as a clean centered icon with a
+            // native tooltip — no nested flyouts (they caused horizontal
+            // overflow/scrollbars inside the narrow rail).
             return (
-              <div key={group.label} className="group/rail relative">
-                {(() => { const GIcon = group.items[0].icon; return (
-                  <span className={`mt-2 flex h-11 w-11 cursor-default items-center justify-center rounded-xl ${groupActive ? 'bg-white/15 text-white' : 'text-white/45'}`}>
-                    <GIcon size={18} />
-                  </span>
-                ) })()}
-                <div className="pointer-events-none invisible absolute left-full top-0 z-50 ml-2 w-52 rounded-2xl border border-[#173b3b]/10 bg-white p-2 opacity-0 shadow-2xl transition group-hover/rail:pointer-events-auto group-hover/rail:visible group-hover/rail:opacity-100">
-                  <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#173b3b]/40">{group.label}</p>
-                  {group.items.map((item) => (
-                    <FlyoutLink key={item.href} item={item} active={active(item.href)} onNavigate={onNavigate} />
-                  ))}
-                </div>
+              <div key={group.label} className="mt-3 flex flex-col items-center">
+                <span className={`px-1 pb-1 text-[9px] font-bold uppercase tracking-widest ${groupActive ? 'text-white/60' : 'text-white/30'}`}>
+                  {group.label.slice(0, 2)}
+                </span>
+                {group.items.map((item) => (
+                  <NavLink key={item.href} item={item} active={active(item.href)} collapsed onNavigate={onNavigate} />
+                ))}
               </div>
             )
           }
@@ -222,17 +220,5 @@ function NavLink({ item, active, collapsed, nested = false, onNavigate }: {
   )
 }
 
-function FlyoutLink({ item, active, onNavigate }: { item: Item; active: boolean; onNavigate: () => void }) {
-  const Icon = item.icon
-  return (
-    <Link
-      href={item.href}
-      onClick={onNavigate}
-      aria-current={active ? 'page' : undefined}
-      className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition ${active ? 'bg-[#e76f51]/10 text-[#c2472a]' : 'text-[#173b3b]/75 hover:bg-[#e4eee8]'}`}
-    >
-      <Icon size={15} /> {item.label}
-    </Link>
-  )
-}
+
 

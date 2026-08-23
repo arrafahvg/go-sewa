@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getSharedDocument } from '@/lib/services/share'
 import { getInvoiceDetail } from '@/lib/services/invoices'
+import { getActiveTemplateFields } from '@/lib/services/templates'
 import { getAgreementWithDetail } from '@/lib/services/agreements'
 
 /**
@@ -30,7 +31,10 @@ export default async function SharedDocumentPage({ params }: { params: Promise<{
 }
 
 async function SharedInvoice({ id }: { id: string }) {
-  const detail = await getInvoiceDetail(id)
+  const [detail, template] = await Promise.all([
+    getInvoiceDetail(id),
+    getActiveTemplateFields('invoice'),
+  ])
   if (!detail) notFound()
   const { invoice, booking, customer, items, devices, lateFees, damageCharges } = detail
 
@@ -47,6 +51,10 @@ async function SharedInvoice({ id }: { id: string }) {
           <p className="font-bold capitalize">{invoice.status.replace(/_/g, ' ')}</p>
         </div>
       </header>
+
+      {template.fields.introLine.trim() && (
+        <p className="border-b border-[#173b3b]/8 pb-4 pt-4 text-sm italic text-[#173b3b]/60">{template.fields.introLine}</p>
+      )}
 
       <section className="grid gap-6 py-6 sm:grid-cols-2">
         <div>
@@ -109,7 +117,7 @@ async function SharedInvoice({ id }: { id: string }) {
       </section>
 
       <footer className="mt-8 border-t border-[#173b3b]/15 pt-4 text-xs leading-5 text-[#173b3b]/55">
-        <p>Late returns are charged per additional day at the applicable daily rate. The deposit covers late fees, damage, and loss; any remainder is refunded after inspection.</p>
+        <p>{template.fields.footerNote.trim() || 'Late returns are charged per additional day at the applicable daily rate. The deposit covers late fees, damage, and loss; any remainder is refunded after inspection.'}</p>
         <p className="mt-2">Thank you for renting with Go-Sewa. Questions? Chat with us on WhatsApp.</p>
       </footer>
     </article>
