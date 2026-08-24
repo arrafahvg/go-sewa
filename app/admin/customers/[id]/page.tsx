@@ -33,7 +33,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="min-h-screen bg-[#f4f1ea] text-[#173b3b]">
-      <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
+      <div className="space-y-6 px-4 py-8 sm:px-6 xl:px-10">
 
         <CustomerProfileCard
           customer={{

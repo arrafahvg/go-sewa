@@ -41,8 +41,8 @@ export default async function InventoryPage() {
   }))
 
   return (
-    <div className="min-h-screen bg-[#f4f1ea] px-6 py-8 text-[#173b3b]">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen bg-[#f4f1ea] px-4 py-8 text-[#173b3b] sm:px-6 xl:px-10">
+      <div>
         <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">
           <a href="/admin" className="hover:underline">Admin</a> / Inventory
         </p>

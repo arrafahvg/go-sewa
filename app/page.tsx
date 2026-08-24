@@ -1,5 +1,6 @@
 import StorefrontShell from '@/components/storefront/storefront-shell'
 import FaqAccordion from '@/components/storefront/faq-accordion'
+import ProductCard from '@/components/storefront/product-card'
 import { Star } from 'lucide-react'
 import { getCatalogProducts, getCategories } from '@/lib/data/catalog'
 import { formatMoneyCompact } from '@/lib/utils/money'
@@ -31,17 +32,31 @@ export default async function Home() {
   return (
     <StorefrontShell whatsapp={company.whatsapp} company={company}>
       <section className="mx-auto max-w-7xl px-5 pb-20 pt-14 lg:px-8">
-        <div className="max-w-3xl">
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{hero?.kicker ?? 'Rent the tech you need, when you need it.'}</p>
-          <h1 className="mt-4 font-serif text-5xl leading-tight tracking-tight sm:text-7xl">
-            {hero?.headline ?? 'Choose your gear. Book it. Enjoy.'}
-          </h1>
-          <p className="mt-6 max-w-xl text-base leading-7 text-[#173b3b]/65">
-            {hero?.sub ?? 'Rent premium smartphones, action cameras, 360 cameras and creator gear for your trip, project, adventure or content.'}
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a href="/rent" className="rounded-full bg-[#173b3b] px-7 py-4 text-sm font-bold text-white transition hover:opacity-90">Browse devices</a>
-            <a href="/rent?category=action-cameras" className="rounded-full border border-[#173b3b]/15 bg-white px-7 py-4 text-sm font-bold transition hover:bg-[#e4eee8]">Browse cameras</a>
+        <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="max-w-3xl">
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{hero?.kicker ?? 'Rent the tech you need, when you need it.'}</p>
+            <h1 className="mt-4 font-serif text-5xl leading-tight tracking-tight sm:text-6xl lg:text-7xl">
+              {hero?.headline ?? 'Choose your gear. Book it. Enjoy.'}
+            </h1>
+            <p className="mt-6 max-w-xl text-base leading-7 text-[#173b3b]/65">
+              {hero?.sub ?? 'Rent premium smartphones, action cameras, 360 cameras and creator gear for your trip, project, adventure or content.'}
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <a href="/rent" className="rounded-full bg-[#173b3b] px-7 py-4 text-sm font-bold text-white transition hover:opacity-90">Browse devices</a>
+              <a href="/rent?category=action-cameras" className="rounded-full border border-[#173b3b]/15 bg-white px-7 py-4 text-sm font-bold transition hover:bg-[#e4eee8]">Browse cameras</a>
+            </div>
+          </div>
+          <div className="relative">
+            <div className="overflow-hidden rounded-[2rem] border border-[#173b3b]/10 shadow-xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={hero?.imageUrl || '/hero-placeholder.svg'}
+                alt={hero?.imageAlt || 'Rental camera gear available at Go-Sewa'}
+                className="aspect-[4/3] w-full object-cover"
+                fetchPriority="high"
+              />
+            </div>
+            <div className="absolute -bottom-5 -left-5 -z-10 hidden h-40 w-40 rounded-[2rem] bg-[#e4eee8] sm:block" aria-hidden />
           </div>
         </div>
       </section>
@@ -56,14 +71,15 @@ export default async function Home() {
         </div>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {featured.map((p) => (
-            <a key={p.id} href={`/rent/${p.slug}`} className="rounded-3xl border border-[#173b3b]/10 bg-white p-6 transition hover:-translate-y-1 hover:shadow-lg">
-              <div className="flex aspect-[4/3] items-center justify-center rounded-2xl bg-[#e4eee8] text-sm font-bold text-[#173b3b]/40">{p.name}</div>
-              <div className="mt-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">{p.categoryNameEn}</p>
-                <h3 className="mt-1 font-serif text-xl font-bold">{p.name}</h3>
-                <p className="mt-2 text-lg font-bold">{p.dailyCents ? formatMoneyCompact(p.dailyCents) : '—'}<span className="text-xs font-normal text-[#173b3b]/50"> / day</span></p>
-              </div>
-            </a>
+            <ProductCard
+              key={p.id}
+              name={p.name}
+              slug={p.slug}
+              imageUrl={p.imageUrl}
+              category={p.categoryNameEn ?? 'Rental'}
+              price={formatMoneyCompact(p.dailyCents)}
+              deposit={p.depositCents}
+            />
           ))}
         </div>
         {products.length === 0 && (

@@ -14,7 +14,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#f4f1ea] text-[#173b3b]">
-      <div className="mx-auto max-w-6xl px-6 py-8">
+      <div className="px-4 py-8 sm:px-6 xl:px-10">
         <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">
           <a href="/admin" className="hover:underline">Admin</a> / Settings
         </p>

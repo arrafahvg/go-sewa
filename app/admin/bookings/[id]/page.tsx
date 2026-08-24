@@ -55,19 +55,19 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="min-h-screen bg-[#f4f1ea] text-[#173b3b]">
       <header className="border-b border-[#173b3b]/10 bg-white px-6 py-4">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
+        <div className="flex items-center justify-between px-4 sm:px-6 xl:px-10">
           <Link href="/admin" className="text-sm font-bold text-[#387066] hover:underline">← Admin</Link>
           <p className="font-serif text-xl font-bold">go<span className="text-[#e76f51]">—</span>sewa <span className="ml-1 text-sm font-normal text-[#173b3b]/50">/ booking</span></p>
         </div>
       </header>
-      <nav className="mx-auto flex max-w-5xl flex-wrap gap-2 overflow-x-auto px-6 pt-4">
+      <nav className="flex flex-wrap gap-2 overflow-x-auto px-4 pt-4 sm:px-6 xl:px-10">
         <Link href="/admin/customers" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Customers</Link>
         <Link href="/admin/leads" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Leads</Link>
         <Link href="/admin/invoices" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Invoices</Link>
         <Link href="/admin/maintenance" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Maintenance</Link>
         <Link href="/admin/inventory" className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8]">Inventory</Link>
       </nav>
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="px-4 py-8 sm:px-6 xl:px-10">
         <BookingOps
           booking={{
             id: detail.booking.id,

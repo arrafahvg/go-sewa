@@ -53,7 +53,7 @@ export default function AdminShell({
         <NavContent user={user} collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} onNavigate={() => setMobileOpen(false)} />
       </aside>
 
-      <main className="min-w-0">
+      <main className="min-w-0 flex-1">
         {children}
       </main>
     </div>

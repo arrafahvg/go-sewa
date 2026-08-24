@@ -212,3 +212,21 @@ a product's price later never mutates historical rentals.
   (e.g. Vercel Cron hitting `/api/cron/overdue`) should be configured in deployment.
 - No automated tests yet — the availability/pricing engines are pure enough to
   unit test first.
+
+## Known limitations / open feedback (tracked)
+
+User-reported items, tracked here until fixed:
+
+1. **Admin pages have too much white/blank space on wide screens.** Every page
+   under `/admin` used its own narrow, centered `max-w-*` container next to the
+   fixed sidebar, leaving large empty gutters. → Being addressed by a dynamic,
+   fluid admin layout (data tables/lists now use the full available width;
+   only document/form pages keep a readable medium column).
+2. **Storefront homepage hero had no image and no way for the admin to set
+   one.** The hero CMS block was text-only. → Hero image support added: admins
+   can upload/replace/remove a hero image at `/admin/content`; until one is
+   uploaded, the storefront renders a bundled placeholder image
+   (`public/hero-placeholder.svg`) so the hero never looks unfinished. The
+   placeholder is demo fallback content — replace it with real imagery via the
+   admin UI.
+

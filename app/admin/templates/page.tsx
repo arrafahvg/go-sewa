@@ -19,7 +19,7 @@ export default async function TemplatesPage() {
 
   return (
     <div className="min-h-screen bg-[#f4f1ea] text-[#173b3b]">
-      <div className="mx-auto max-w-6xl px-6 py-8">
+      <div className="px-4 py-8 sm:px-6 xl:px-10">
         <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45"><Link href="/admin" className="hover:underline">Admin</Link> / Templates</p>
         <h1 className="mt-2 font-serif text-3xl tracking-tight">Document templates</h1>
         <p className="mt-1 text-sm text-[#173b3b]/60">Edit the header, terms and footer of your rental agreements and invoices. New documents use the saved version; existing signed or paid documents never change.</p>

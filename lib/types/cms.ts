@@ -10,6 +10,10 @@ export type HomeHeroSection = {
   kicker: string
   headline: string
   sub: string
+  /** Admin-uploaded hero image URL. When empty, the storefront shows a bundled placeholder. */
+  imageUrl?: string | null
+  /** Alt text describing the hero image for accessibility/SEO. */
+  imageAlt?: string
 }
 
 /** Union of editable homepage sections stored on `cms_pages.home.sections`. */
