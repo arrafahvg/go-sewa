@@ -17,11 +17,33 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
     getActiveTemplateFields('invoice'),
   ])
   if (!detail) notFound()
-  const { invoice, booking, customer, items, devices, lateFees, damageCharges } = detail
+  const { invoice, booking, customer, items, devices, lateFees, damageCharges, manualItems } = detail
 
   const extrasCents =
     lateFees.reduce((s, f) => s + f.amountCents, 0) +
     damageCharges.reduce((s, c) => s + c.amountCents, 0)
+
+  // Manual (booking-less) invoices render their free-form lines; booking invoices
+  // render the booking snapshot lines (§58).
+  const lineRows = items.length
+    ? items.map((i) => ({
+        id: i.id,
+        name: i.productNameSnapshot ?? i.productId,
+        isAddOn: !!i.addOnId,
+        ruleLabel: i.priceRuleLabel,
+        quantity: i.quantity,
+        unitPriceCents: i.unitPriceCents,
+        lineTotalCents: i.lineTotalCents,
+      }))
+    : manualItems.map((m) => ({
+        id: m.id,
+        name: m.description,
+        isAddOn: false,
+        ruleLabel: null,
+        quantity: m.quantity,
+        unitPriceCents: m.unitPriceCents,
+        lineTotalCents: m.lineTotalCents,
+      }))
 
   return (
     <div className="min-h-screen bg-[#f4f1ea] px-6 py-8 text-[#173b3b] print:bg-white print:p-0">
@@ -86,15 +108,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           </section>
 
           <InvoiceLines
-            items={items.map((i) => ({
-              id: i.id,
-              name: i.productNameSnapshot ?? i.productId,
-              isAddOn: !!i.addOnId,
-              ruleLabel: i.priceRuleLabel,
-              quantity: i.quantity,
-              unitPriceCents: i.unitPriceCents,
-              lineTotalCents: i.lineTotalCents,
-            }))}
+            items={lineRows}
             devices={devices.map((d) => ({ assetCode: d.assetCode, imei: d.imei }))}
             lateFees={lateFees.map((f) => ({ id: f.id, daysLate: f.daysLate, amountCents: f.amountCents }))}
             damageCharges={damageCharges.map((c) => ({ id: c.id, description: c.description, amountCents: c.amountCents }))}

@@ -158,12 +158,15 @@ export async function countDraftAgreements(): Promise<number> {
  * are never touched. Item/pricing data still comes from booking snapshots (§58).
  */
 export async function regenerateDraftAgreements(byUserId: string | null): Promise<number> {
-  const drafts = await db.select({ bookingId: rentalAgreements.bookingId }).from(rentalAgreements).where(eq(rentalAgreements.status, 'draft'))
+  // Only booking-linked drafts can be re-rendered from the template — manual
+  // (booking-less) agreements have no booking snapshot to merge (§35).
+  const drafts = (await db.select({ bookingId: rentalAgreements.bookingId }).from(rentalAgreements).where(eq(rentalAgreements.status, 'draft')))
+    .filter((d) => d.bookingId)
   if (drafts.length === 0) return 0
 
   const { generateAgreementForBooking } = await import('./agreements')
   for (const d of drafts) {
-    await generateAgreementForBooking(d.bookingId, { byUserId })
+    await generateAgreementForBooking(d.bookingId!, { byUserId })
   }
 
   await logActivity({

@@ -4,6 +4,7 @@ import { getSharedDocument } from '@/lib/services/share'
 import { getInvoiceDetail } from '@/lib/services/invoices'
 import { getActiveTemplateFields } from '@/lib/services/templates'
 import { getAgreementWithDetail } from '@/lib/services/agreements'
+import { formatMoney } from '@/lib/utils/money'
 
 /**
  * Public read-only document view (§21B/§35): reached only via an unguessable,
@@ -36,7 +37,27 @@ async function SharedInvoice({ id }: { id: string }) {
     getActiveTemplateFields('invoice'),
   ])
   if (!detail) notFound()
-  const { invoice, booking, customer, items, devices, lateFees, damageCharges } = detail
+  const { invoice, booking, customer, items, devices, lateFees, damageCharges, manualItems } = detail
+
+  // Manual (booking-less) invoices render their free-form lines; booking invoices
+  // render the booking snapshot lines (§58).
+  const lineRows = items.length
+    ? items.map((i) => ({
+        id: i.id,
+        name: i.productNameSnapshot ?? i.productId,
+        addOn: !!i.addOnId,
+        quantity: i.quantity,
+        unitPriceCents: i.unitPriceCents,
+        lineTotalCents: i.lineTotalCents,
+      }))
+    : manualItems.map((m) => ({
+        id: m.id,
+        name: m.description,
+        addOn: false,
+        quantity: m.quantity,
+        unitPriceCents: m.unitPriceCents,
+        lineTotalCents: m.lineTotalCents,
+      }))
 
   return (
     <article className="rounded-2xl border border-[#173b3b]/10 bg-white p-6 sm:p-10 text-sm leading-6">
@@ -81,30 +102,27 @@ async function SharedInvoice({ id }: { id: string }) {
           </tr>
         </thead>
         <tbody>
-          {items.map((item) => {
-            const name = item.productNameSnapshot ?? item.productId
-            return (
-              <tr key={item.id} className="border-b border-[#173b3b]/8">
-                <td className="py-3 font-semibold">{item.addOnId ? `${name} (add-on)` : name}</td>
-                <td className="py-3 text-center">{item.quantity}</td>
-                <td className="py-3 text-right">Rp {item.unitPriceCents.toLocaleString('id-ID')}</td>
-                <td className="py-3 text-right font-semibold">Rp {item.lineTotalCents.toLocaleString('id-ID')}</td>
-              </tr>
-            )
-          })}
+          {lineRows.map((item) => (
+            <tr key={item.id} className="border-b border-[#173b3b]/8">
+              <td className="py-3 font-semibold">{item.addOn ? `${item.name} (add-on)` : item.name}</td>
+              <td className="py-3 text-center">{item.quantity}</td>
+              <td className="py-3 text-right">{formatMoney(item.unitPriceCents)}</td>
+              <td className="py-3 text-right font-semibold">{formatMoney(item.lineTotalCents)}</td>
+            </tr>
+          ))}
           {devices.length > 0 && (
             <tr className="border-b border-[#173b3b]/8"><td colSpan={4} className="py-2 text-xs text-[#173b3b]/55">Units: {devices.map((d) => d.assetCode).join(', ')}</td></tr>
           )}
           {lateFees.map((f) => (
             <tr key={f.id} className="border-b border-[#173b3b]/8">
               <td className="py-3 font-semibold text-[#a43d2b]">Late return fee ({f.daysLate}d)</td><td /><td />
-              <td className="py-3 text-right font-semibold">Rp {f.amountCents.toLocaleString('id-ID')}</td>
+              <td className="py-3 text-right font-semibold">{formatMoney(f.amountCents)}</td>
             </tr>
           ))}
           {damageCharges.map((c) => (
             <tr key={c.id} className="border-b border-[#173b3b]/8">
               <td className="py-3 font-semibold text-[#a43d2b]">Damage charge</td><td /><td />
-              <td className="py-3 text-right font-semibold">Rp {c.amountCents.toLocaleString('id-ID')}</td>
+              <td className="py-3 text-right font-semibold">{formatMoney(c.amountCents)}</td>
             </tr>
           ))}
         </tbody>
@@ -112,7 +130,7 @@ async function SharedInvoice({ id }: { id: string }) {
 
       <section className="mt-5 ml-auto max-w-xs space-y-1.5 text-sm">
         <div className="flex justify-between border-t border-[#173b3b]/20 pt-2 text-base font-bold">
-          <span>Total due</span><span>Rp {invoice.totalCents.toLocaleString('id-ID')}</span>
+          <span>Total due</span><span>{formatMoney(invoice.totalCents)}</span>
         </div>
       </section>
 

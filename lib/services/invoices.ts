@@ -1,10 +1,10 @@
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
   invoices, invoiceTemplates, bookings, bookingItems, bookingDeviceAllocations,
-  customers, devices, lateFees, damageCharges,
+  customers, devices, lateFees, damageCharges, invoiceLineItems,
 } from '@/lib/db/schema'
-import { logActivity } from './audit'
+import { logActivity, uid } from './audit'
 
 /**
  * Invoice services (spec §35). An invoice is generated from the booking's
@@ -30,7 +30,10 @@ export async function getInvoiceDetail(invoiceId: string) {
 
   const customer = booking
     ? (await db.select().from(customers).where(eq(customers.id, booking.customerId)))[0] ?? null
-    : null
+    // Manual (booking-less) invoices carry their own customerId.
+    : invoice.customerId
+      ? (await db.select().from(customers).where(eq(customers.id, invoice.customerId)))[0] ?? null
+      : null
 
   const items = booking ? await db.select().from(bookingItems).where(eq(bookingItems.bookingId, booking.id)) : []
   const allocations = booking
@@ -47,7 +50,14 @@ export async function getInvoiceDetail(invoiceId: string) {
       }
     : { late: [], damage: [] }
 
-  return { invoice, booking, customer, items, devices: devicesList, lateFees: fees.late, damageCharges: fees.damage }
+  // Manual (booking-less) invoices carry free-form line items instead of booking snapshots (§35).
+  const manualItems = invoice.bookingId
+    ? []
+    : await db.select().from(invoiceLineItems)
+        .where(eq(invoiceLineItems.invoiceId, invoice.id))
+        .orderBy(asc(invoiceLineItems.createdAt))
+
+  return { invoice, booking, customer, items, devices: devicesList, lateFees: fees.late, damageCharges: fees.damage, manualItems: manualItems }
 }
 
 /** Next sequential number INV-YYYYMMDD-NNN for today. */
@@ -113,6 +123,85 @@ export async function generateInvoiceForBooking(
     metadata: { bookingNumber: booking.number, number, totalCents: booking.totalCents + extrasCents },
   })
   return { id, number, alreadyExisted: false }
+}
+
+/**
+ * Create a manual (booking-less) invoice — e.g. a deposit-only or one-off charge
+ * (spec §35 "generate invoices without manually recreating documents"). Line items
+ * are free-form and stored in invoice_line_items. The customer is reused by phone
+ * or created inline; amounts are integer Rupiah minor-units (§ money). Audit-logged (§63).
+ */
+export async function createManualInvoice(input: {
+  customerId?: string | null
+  customerName: string
+  customerPhone?: string | null
+  customerEmail?: string | null
+  lines: { description: string; quantity: number; unitPriceCents: number }[]
+  dueAt?: Date | null
+  byUserId?: string | null
+}): Promise<{ id: string; number: string }> {
+  const cleaned = input.lines
+    .filter((l) => l.description?.trim() && l.quantity > 0 && l.unitPriceCents >= 0)
+    .map((l) => ({
+      description: l.description.trim(),
+      quantity: Math.max(1, Math.floor(l.quantity)),
+      unitPriceCents: Math.round(l.unitPriceCents),
+    }))
+  if (cleaned.length === 0) throw new Error('Add at least one line item to the invoice.')
+
+  const totalCents = cleaned.reduce((s, l) => s + l.quantity * l.unitPriceCents, 0)
+  if (totalCents <= 0) throw new Error('Invoice total must be greater than zero.')
+
+  // Reuse an existing customer by id, else by phone, else create inline (§19B same rule).
+  let customerId = input.customerId ?? null
+  if (!customerId) {
+    const phone = input.customerPhone?.trim() ?? ''
+    if (phone) {
+      const found = (await db.select({ id: customers.id }).from(customers)
+        .where(eq(customers.phone, phone)).limit(1))[0]
+      customerId = found?.id ?? null
+    }
+  }
+  if (!customerId) {
+    const name = input.customerName?.trim()
+    if (!name) throw new Error('Customer name is required.')
+    customerId = uid()
+    await db.insert(customers).values({
+      id: customerId, name,
+      phone: input.customerPhone?.trim() || null,
+      email: input.customerEmail?.trim() || null,
+    })
+  }
+
+  const activeTemplate = (await db.select().from(invoiceTemplates).limit(1))[0]
+  const id = crypto.randomUUID()
+  const number = await nextInvoiceNumber()
+  await db.insert(invoices).values({
+    id, number,
+    bookingId: null,
+    customerId,
+    templateId: activeTemplate?.id ?? null,
+    totalCents,
+    status: 'unpaid',
+    dueAt: input.dueAt ?? null,
+    createdById: input.byUserId ?? null,
+  })
+  if (cleaned.length) {
+    await db.insert(invoiceLineItems).values(cleaned.map((l) => ({
+      id: crypto.randomUUID(), invoiceId: id,
+      description: l.description, quantity: l.quantity,
+      unitPriceCents: l.unitPriceCents, lineTotalCents: l.quantity * l.unitPriceCents,
+    })))
+  }
+
+  await logActivity({
+    userId: input.byUserId,
+    action: 'invoice_created_manual',
+    entity: 'invoice',
+    entityId: id,
+    metadata: { number, totalCents, customerId, lineCount: cleaned.length },
+  })
+  return { id, number }
 }
 
 export async function setInvoiceStatus(

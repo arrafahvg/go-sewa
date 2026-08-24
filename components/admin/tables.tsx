@@ -133,12 +133,16 @@ export function NewRentalForm({ products, customers }: { products: Product[]; cu
 
       <div className="mt-6 space-y-4 rounded-2xl border border-[#173b3b]/10 bg-white p-6">
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-xs font-bold text-[#173b3b]/60">Customer name (or pick existing)
-            <select value={name} onChange={(e) => setName(e.target.value)} className={inputCls}>
-              <option value="">— New customer —</option>
-              {customers.map((c) => <option key={c.id} value={c.name}>{c.name}{c.phone ? ` (${c.phone})` : ''}</option>)}
-            </select>
+          {/* §19B step 1: create a new customer inline OR pick an existing one.
+              A free-text input (with a searchable datalist of existing customers) lets staff
+              type a brand-new name; the booking service reuses by phone/name or creates on the fly. */}
+          <label className="block text-xs font-bold text-[#173b3b]/60">Customer name
+            <input list="admin-customer-names" value={name} onChange={(e) => setName(e.target.value)}
+              className={inputCls} placeholder="Type a new name or pick an existing customer" required />
           </label>
+          <datalist id="admin-customer-names">
+            {customers.map((c) => <option key={c.id} value={c.name}>{c.phone ? ` · ${c.phone}` : ''}</option>)}
+          </datalist>
           <label className="block text-xs font-bold text-[#173b3b]/60">WhatsApp number
             <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} placeholder="+62 812 ..." />
           </label>

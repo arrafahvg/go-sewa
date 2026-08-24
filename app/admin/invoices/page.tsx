@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { listInvoices } from '@/lib/services/invoices'
+import { getCustomers } from '@/lib/data/admin'
 import { formatMoney } from '@/lib/utils/money'
 import { db } from '@/lib/db'
 import { bookings } from '@/lib/db/schema'
+import ManualInvoicePanel from '@/components/admin/manual-invoice-panel'
 
 export const metadata: Metadata = { title: 'Invoices — Go-Sewa Admin' }
 export const dynamic = 'force-dynamic'
@@ -18,6 +20,7 @@ const STATUS_TONE: Record<string, string> = {
 
 export default async function InvoicesPage() {
   const rows = await listInvoices()
+  const customers = await getCustomers()
   const bookingRows = rows.some((r) => r.bookingId)
     ? await db.select({ id: bookings.id, number: bookings.number }).from(bookings)
     : []
@@ -29,7 +32,10 @@ export default async function InvoicesPage() {
         <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">
           <Link href="/admin" className="hover:underline">Admin</Link> / Invoices
         </p>
-        <h1 className="mt-2 font-serif text-3xl tracking-tight">Invoices</h1>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="font-serif text-3xl tracking-tight">Invoices</h1>
+          <ManualInvoicePanel customers={customers.map((c) => ({ id: c.id, name: c.name, phone: c.phone }))} />
+        </div>
 
         <div className="mt-6 overflow-x-auto rounded-2xl border border-[#173b3b]/10 bg-white">
           <table className="w-full min-w-[720px] text-left text-sm">
@@ -38,7 +44,7 @@ export default async function InvoicesPage() {
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-10 text-center text-sm text-[#173b3b]/50">No invoices yet — generate one from a booking.</td></tr>
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-sm text-[#173b3b]/50">No invoices yet — generate one from a booking, or create a manual invoice above.</td></tr>
               )}
               {rows.map((inv) => (
                 <tr key={inv.id} className="border-t border-[#173b3b]/8 transition hover:bg-[#faf8f2]">

@@ -92,6 +92,11 @@ to book the last unit cannot both succeed.
 The public checkout and the admin walk-in flow call the **same** service; only
 the `channel` differs (`online` vs `in_store` / `phone` / `whatsapp`).
 
+The walk-in "New rental" customer field is a free-text input backed by a searchable
+datalist of existing customers (§19B step 1), so staff can create a brand-new customer
+inline (by name + WhatsApp number) or pick an existing one. The booking service
+reuses a customer by phone/name or inserts a new record in the same transaction.
+
 ### Device lifecycle
 
 `available → reserved → rented → returning → inspection → available`
@@ -114,6 +119,7 @@ a product's price later never mutates historical rentals.
 | `/rent/[slug]` | Product detail + live availability date picker |
 | `/checkout` | Cart review + booking submission |
 | `/admin` | Admin console (overview, bookings, walk-in new rental, customers) |
+| `/admin/invoices`, `/admin/agreements` | Booking-driven + manual invoice/agreement lists |
 | `/admin/settings/account` | Staff account settings (email, password, sessions) |
 | `/sign-in`, `/sign-up` | Auth |
 
@@ -139,10 +145,24 @@ a product's price later never mutates historical rentals.
   `/admin/inventory`.
 - Invoice generation is live: booking detail → "Generate invoice", printable
   document at `/admin/invoices/[id]` (print-to-PDF), list at `/admin/invoices`.
+  Manual **booking-less invoices** (§35) are also supported: on `/admin/invoices`
+  use "New manual invoice" to issue a free-form, deposit-only or one-off document
+  against an existing (or inline-created) customer. Line items are stored in
+  `invoice_line_items` (new table, migration `0005`) and render on both the admin
+  invoice page and the public `/d/[token]` share view.
+- All money is formatted consistently through `formatMoney()` (stored minor-units
+  "cents" → readable Rupiah) across the admin, storefront and public `/d/[token]`
+  document views, so a shared invoice always shows the same amount as the admin page.
 - Rental agreement generation is live: booking detail → "Generate agreement",
 - Rental agreement generation is live: booking detail → "Generate agreement",
   printable/signature-ready document at `/admin/agreements/[id]`, merged from
   the active template + booking snapshot.
+- Manual **booking-less rental agreements** (§21/§35) are also live: on
+  `/admin/agreements` use "New manual agreement" to build an agreement from a
+  customer + free-form equipment/terms lines (no linked rental). Lines are
+  stored in `agreement_line_items` (new table, migration `0006`), the text is
+  merged from the active template, and the draft is printable/signable/shareable
+  exactly like a booking agreement. The Agreements page also lists all agreements.
 - Document templates (§21B): staff edit agreement & invoice templates at
   `/admin/templates` (structured fields + live preview; saving bumps the
   version and can re-render existing draft agreements). Invoices and agreements

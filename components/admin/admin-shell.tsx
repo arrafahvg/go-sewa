@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, Users, UserPlus, Wrench, ReceiptText,
-  FileText, Settings, UserRound, ExternalLink, ChevronLeft, ChevronRight, Menu, Store,
+  FileText, Settings, UserRound, ExternalLink, ChevronLeft, ChevronRight, Menu, Store, FileSignature,
 } from 'lucide-react'
 
 const isActive = (pathname: string, href: string) =>
@@ -79,6 +79,7 @@ const GROUPS: Group[] = [
     items: [
       { label: 'Maintenance & damage', href: '/admin/maintenance', icon: Wrench },
       { label: 'Invoices', href: '/admin/invoices', icon: ReceiptText },
+      { label: 'Agreements', href: '/admin/agreements', icon: FileSignature },
       { label: 'Document templates', href: '/admin/templates', icon: FileText },
     ],
   },

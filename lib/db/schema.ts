@@ -426,6 +426,19 @@ export const invoices = pgTable('invoices', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
+/** Free-form line items for manual (booking-less) invoices (§35 · "generate without
+ * recreating documents"). A booking-linked invoice reads its lines from booking_items;
+ * a manual invoice from this table. line_total is stored so history never drifts. */
+export const invoiceLineItems = pgTable('invoice_line_items', {
+  id: text('id').primaryKey(),
+  invoiceId: text('invoice_id').notNull(),
+  description: text('description').notNull(),
+  quantity: integer('quantity').notNull().default(1),
+  unitPriceCents: integer('unit_price_cents').notNull(),
+  lineTotalCents: integer('line_total_cents').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [index('invoice_line_item_invoice_idx').on(t.invoiceId)])
+
 export const agreementTemplates = pgTable('agreement_templates', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -440,7 +453,10 @@ export const agreementTemplates = pgTable('agreement_templates', {
 export const rentalAgreements = pgTable('rental_agreements', {
   id: text('id').primaryKey(),
   number: text('number').notNull().unique(),
-  bookingId: text('booking_id').notNull(),
+  /** Link to a booking — null for manually created, booking-less agreements (§21/§35). */
+  bookingId: text('booking_id'),
+  /** Billed/party customer — set for manual agreements; booking-linked reads it from the booking. */
+  customerId: text('customer_id'),
   templateId: text('template_id'),
   templateVersion: integer('template_version').notNull().default(1),
   contentHtml: text('content_html'),
@@ -450,6 +466,19 @@ export const rentalAgreements = pgTable('rental_agreements', {
   generatedById: text('generated_by_id'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
+
+/** Free-form equipment/terms lines for manual (booking-less) agreements (§21/§35).
+ * Booking agreements read their terms from booking_items + devices; manual
+ * agreements read from this table. line totals are kept for completeness. */
+export const agreementLineItems = pgTable('agreement_line_items', {
+  id: text('id').primaryKey(),
+  agreementId: text('agreement_id').notNull(),
+  description: text('description').notNull(),
+  quantity: integer('quantity').notNull().default(1),
+  unitPriceCents: integer('unit_price_cents').notNull().default(0),
+  lineTotalCents: integer('line_total_cents').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [index('agreement_line_item_agreement_idx').on(t.agreementId)])
 
 export const agreementAcceptances = pgTable('agreement_acceptances', {
   id: text('id').primaryKey(),

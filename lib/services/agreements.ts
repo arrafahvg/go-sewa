@@ -1,10 +1,10 @@
-import { and, desc, eq, inArray } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
   rentalAgreements, agreementTemplates, bookings, bookingItems,
-  bookingDeviceAllocations, customers, devices,
+  bookingDeviceAllocations, customers, devices, agreementLineItems,
 } from '@/lib/db/schema'
-import { logActivity } from './audit'
+import { logActivity, uid } from './audit'
 import { formatMoney } from '@/lib/utils/money'
 
 /**
@@ -21,10 +21,15 @@ export async function getAgreement(id: string) {
 export async function getAgreementWithDetail(id: string) {
   const agreement = await getAgreement(id)
   if (!agreement) return null
-  const booking = (await db.select().from(bookings).where(eq(bookings.id, agreement.bookingId)))[0] ?? null
+  const booking = agreement.bookingId
+    ? (await db.select().from(bookings).where(eq(bookings.id, agreement.bookingId)))[0] ?? null
+    : null
   const customer = booking
     ? (await db.select().from(customers).where(eq(customers.id, booking.customerId)))[0] ?? null
-    : null
+    // Manual (booking-less) agreements store their own customerId.
+    : agreement.customerId
+      ? (await db.select().from(customers).where(eq(customers.id, agreement.customerId)))[0] ?? null
+      : null
   const items = booking ? await db.select().from(bookingItems).where(eq(bookingItems.bookingId, booking.id)) : []
   const allocations = booking
     ? await db.select().from(bookingDeviceAllocations).where(and(eq(bookingDeviceAllocations.bookingId, booking.id)))
@@ -32,7 +37,37 @@ export async function getAgreementWithDetail(id: string) {
   const deviceRows = allocations.length
     ? await db.select().from(devices).where(inArray(devices.id, allocations.map((a) => a.deviceId)))
     : []
-  return { agreement, booking, customer, items, devices: deviceRows }
+  const manualItems = agreement.bookingId
+    ? []
+    : await db.select().from(agreementLineItems)
+        .where(eq(agreementLineItems.agreementId, agreement.id))
+        .orderBy(asc(agreementLineItems.createdAt))
+  return { agreement, booking, customer, items, devices: deviceRows, manualItems }
+}
+
+/** Newest-first list of agreements with linked booking/customer labels (spec §35). */
+export async function listAgreements() {
+  const rows = await db.select().from(rentalAgreements).orderBy(desc(rentalAgreements.createdAt)).limit(200)
+  const bookingIds = [...new Set(rows.map((r) => r.bookingId).filter((x): x is string => !!x))]
+  const custIds = [...new Set(rows.map((r) => r.customerId).filter((x): x is string => !!x))]
+  const [bookRows, custRows] = await Promise.all([
+    bookingIds.length
+      ? db.select({ id: bookings.id, number: bookings.number, customerId: bookings.customerId }).from(bookings).where(inArray(bookings.id, bookingIds))
+      : [],
+    custIds.length
+      ? db.select({ id: customers.id, name: customers.name }).from(customers).where(inArray(customers.id, custIds))
+      : [],
+  ])
+  const bookingMap = new Map(bookRows.map((b) => [b.id, b]))
+  const custMap = new Map(custRows.map((c) => [c.id, c.name]))
+  return rows.map((r) => {
+    const b = r.bookingId ? bookingMap.get(r.bookingId) : null
+    return {
+      ...r,
+      bookingNumber: b?.number ?? null,
+      customerName: b ? (custMap.get(b.customerId) ?? null) : (r.customerId ? (custMap.get(r.customerId) ?? null) : null),
+    }
+  })
 }
 
 async function nextAgreementNumber(): Promise<string> {
@@ -145,6 +180,102 @@ export async function generateAgreementForBooking(
   })
   await logActivity({ userId: opts.byUserId, action: 'agreement_generated', entity: 'agreement', entityId: id, metadata: { bookingNumber: booking.number, number, templateVersion } })
   return { id, number, alreadyExisted: false }
+}
+
+/** Build the items table for a manual (booking-less) agreement — equipment description + qty. */
+function renderManualItemsTable(lines: { description: string; quantity: number }[]): string {
+  const rows = lines.map((l) =>
+    `<tr><td>${l.description.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</td><td style="text-align:center">${l.quantity}</td></tr>`,
+  ).join('')
+  return `<table border="1" cellpadding="6" cellspacing="0" width="100%"><thead><tr><th>Item</th><th>Qty</th></tr></thead><tbody>${rows}</tbody></table>`
+}
+
+/**
+ * Create a manual (booking-less) rental agreement (spec §21/§35). Unlike a
+ * booking agreement it has no linked rental: staff enter a customer and a list
+ * of equipment/terms. The active template (or the built-in default) is merged
+ * with this manual context and stored; the draft can then be printed/signed and
+ * shared exactly like a booking agreement. Audit-logged (§63).
+ */
+export async function createManualAgreement(input: {
+  customerId?: string | null
+  customerName: string
+  customerPhone?: string | null
+  customerEmail?: string | null
+  lines: { description: string; quantity: number }[]
+  byUserId?: string | null
+}): Promise<{ id: string; number: string }> {
+  const cleaned = input.lines
+    .filter((l) => l.description?.trim() && l.quantity > 0)
+    .map((l) => ({ description: l.description.trim(), quantity: Math.max(1, Math.floor(l.quantity)) }))
+  if (cleaned.length === 0) throw new Error('Add at least one equipment/terms line.')
+
+  // Resolve or create the customer (same reuse rule as bookings, §19B).
+  let customerId = input.customerId ?? null
+  if (!customerId) {
+    const phone = input.customerPhone?.trim() ?? ''
+    if (phone) {
+      const found = (await db.select({ id: customers.id }).from(customers)
+        .where(eq(customers.phone, phone)).limit(1))[0]
+      customerId = found?.id ?? null
+    }
+  }
+  if (!customerId) {
+    const name = input.customerName?.trim()
+    if (!name) throw new Error('Customer name is required.')
+    customerId = uid()
+    await db.insert(customers).values({
+      id: customerId, name,
+      phone: input.customerPhone?.trim() || null,
+      email: input.customerEmail?.trim() || null,
+    })
+  }
+
+  const templateRow = (await db.select().from(agreementTemplates).where(eq(agreementTemplates.active, true)).limit(1))[0]
+  const templateVersion = templateRow?.version ?? 1
+
+  const data: Record<string, string> = {
+    agreement_number: '',
+    booking_number: 'Manual — no linked rental',
+    issued_at: new Date().toLocaleDateString(),
+    customer_name: input.customerName?.trim() || '—',
+    customer_phone: input.customerPhone?.trim() || '—',
+    customer_email_line: input.customerEmail?.trim() ? ` - ${input.customerEmail.trim()}` : '',
+    rental_dates: '—',
+    items_table: renderManualItemsTable(cleaned),
+    device_list: '—',
+    rental_total: '—',
+    deposit: '—',
+  }
+  const number = await nextAgreementNumber()
+  data.agreement_number = number
+  const contentHtml = mergeTemplate(templateRow?.bodyHtml ?? defaultTemplate(), data)
+
+  const id = crypto.randomUUID()
+  await db.insert(rentalAgreements).values({
+    id, number,
+    bookingId: null,
+    customerId,
+    templateId: templateRow?.id ?? null,
+    templateVersion,
+    contentHtml,
+    status: 'draft',
+    generatedById: input.byUserId ?? null,
+  })
+  await db.insert(agreementLineItems).values(cleaned.map((l) => ({
+    id: crypto.randomUUID(), agreementId: id,
+    description: l.description, quantity: l.quantity,
+    unitPriceCents: 0, lineTotalCents: 0,
+  })))
+
+  await logActivity({
+    userId: input.byUserId,
+    action: 'agreement_created_manual',
+    entity: 'agreement',
+    entityId: id,
+    metadata: { number, customerId, lineCount: cleaned.length },
+  })
+  return { id, number }
 }
 
 export async function setAgreementStatus(
