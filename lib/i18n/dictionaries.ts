@@ -1,0 +1,178 @@
+export type Locale = 'id' | 'en'
+
+/** Cookie name shared between the server locale resolver and the language switcher. */
+export const LOCALE_COOKIE = 'go_lang'
+
+/**
+ * Storefront UI dictionary (§9). Customer-facing strings live here — never
+ * inline literals in components. Admin console stays English for now.
+ */
+const en = {
+  nav: {
+    home: 'Home',
+    rent: 'Rent',
+    phones: 'Phones',
+    cameras: 'Cameras',
+    actionCameras: 'Action Cameras',
+  },
+  shell: {
+    cartAria: 'Rental cart',
+    menuAria: 'Menu',
+    chatUs: 'Chat us',
+  },
+  home: {
+    heroKicker: 'Rent the tech you need, when you need it.',
+    heroHeadline: 'Choose your gear. Book it. Enjoy.',
+    heroSub: 'Rent premium smartphones, action cameras, 360 cameras and creator gear for your trip, project, adventure or content.',
+    browseDevices: 'Browse devices',
+    browseCameras: 'Browse cameras',
+    lineupKicker: 'The lineup',
+    featuredDevices: 'Featured devices',
+    viewAll: 'View all →',
+    emptyProductsPre: 'No rental devices found yet. Add products and run ',
+    emptyProductsPost: '.',
+    browseBy: 'Browse by',
+    categoriesTitle: 'Categories',
+    testimonialsKicker: 'Word on the street',
+    testimonialsTitle: 'What customers say',
+    faqKicker: 'Good to know',
+    faqTitle: 'Frequently asked questions',
+    rentalCategoryFallback: 'Rental',
+  },
+  card: {
+    perDay: 'per day',
+    deposit: 'Deposit',
+  },
+  rentPage: {
+    kicker: 'The lineup',
+    title: 'Rent the tech you need.',
+    subtitle: 'Every listed device is a real tracked physical unit — availability updates live from actual rentals.',
+  },
+  rent: {
+    searchPlaceholder: 'Search devices…',
+    searchAria: 'Search devices',
+    sortLabel: 'Sort devices',
+    sortFeatured: 'Featured',
+    sortPriceAsc: 'Price: low to high',
+    sortPriceDesc: 'Price: high to low',
+    sortName: 'Name A–Z',
+    bandAny: 'Any price',
+    bandUnder50: 'Under Rp 50k',
+    band50to100: 'Rp 50k – 100k',
+    band100to150: 'Rp 100k – 150k',
+    bandOver150: 'Over Rp 150k',
+    noDeposit: 'No deposit',
+    allCategories: 'All',
+    oneDevice: '1 device',
+    devicesMatching: '{count} devices matching your filters',
+    devicesInLineup: '{count} devices in the lineup',
+    clearAll: 'Clear all',
+    noResults: 'No devices match your search. Try a different keyword or clear your filters.',
+  },
+  detail: {
+    selectDates: 'Select your rental dates to check availability.',
+    notAvailable: 'Not available for your selected dates. Choose different dates.',
+    onlyOneLeft: 'Only 1 device left for your selected dates',
+    available: 'Available for your selected dates',
+    unableToCheck: 'Unable to check availability. Please try again.',
+    quantity: 'Quantity',
+    decreaseQty: 'Decrease quantity',
+    increaseQty: 'Increase quantity',
+    addOnsTitle: 'Optional add-ons',
+    perDayShort: '/day',
+    rentalFee: 'Rental fee ({days}d × {qty})',
+    deposit: 'Deposit',
+    totalDue: 'Total due before rental',
+    rentNow: 'Rent now',
+    addToCart: 'Add to cart',
+    needHelp: 'Need help choosing? Chat on WhatsApp',
+  },
+}
+
+export type Dictionary = typeof en
+
+const id: Dictionary = {
+  nav: {
+    home: 'Beranda',
+    rent: 'Sewa',
+    phones: 'Ponsel',
+    cameras: 'Kamera',
+    actionCameras: 'Kamera Aksi',
+  },
+  shell: {
+    cartAria: 'Keranjang sewa',
+    menuAria: 'Menu',
+    chatUs: 'Chat kami',
+  },
+  home: {
+    heroKicker: 'Sewa teknologi yang kamu butuhkan, kapan pun itu.',
+    heroHeadline: 'Pilih perlengkapanmu. Pesan. Nikmati.',
+    heroSub: 'Sewa smartphone premium, kamera aksi, kamera 360, dan peralatan kreator untuk perjalanan, proyek, petualangan, atau kontenmu.',
+    browseDevices: 'Lihat perangkat',
+    browseCameras: 'Lihat kamera',
+    lineupKicker: 'Pilihan kami',
+    featuredDevices: 'Perangkat unggulan',
+    viewAll: 'Lihat semua →',
+    emptyProductsPre: 'Belum ada perangkat sewaan. Tambahkan produk dan jalankan ',
+    emptyProductsPost: '.',
+    browseBy: 'Telusuri berdasarkan',
+    categoriesTitle: 'Kategori',
+    testimonialsKicker: 'Kata mereka',
+    testimonialsTitle: 'Apa kata pelanggan',
+    faqKicker: 'Baik untuk diketahui',
+    faqTitle: 'Pertanyaan yang sering diajukan',
+    rentalCategoryFallback: 'Sewa',
+  },
+  card: {
+    perDay: 'per hari',
+    deposit: 'Jaminan',
+  },
+  rentPage: {
+    kicker: 'Pilihan kami',
+    title: 'Sewa teknologi yang kamu butuhkan.',
+    subtitle: 'Setiap perangkat adalah unit fisik yang terlacak nyata — ketersediaan diperbarui langsung dari penyewaan aktif.',
+  },
+  rent: {
+    searchPlaceholder: 'Cari perangkat…',
+    searchAria: 'Cari perangkat',
+    sortLabel: 'Urutkan perangkat',
+    sortFeatured: 'Unggulan',
+    sortPriceAsc: 'Harga: rendah ke tinggi',
+    sortPriceDesc: 'Harga: tinggi ke rendah',
+    sortName: 'Nama A–Z',
+    bandAny: 'Semua harga',
+    bandUnder50: 'Di bawah Rp 50rb',
+    band50to100: 'Rp 50rb – 100rb',
+    band100to150: 'Rp 100rb – 150rb',
+    bandOver150: 'Di atas Rp 150rb',
+    noDeposit: 'Tanpa jaminan',
+    allCategories: 'Semua',
+    oneDevice: '1 perangkat',
+    devicesMatching: '{count} perangkat sesuai filtermu',
+    devicesInLineup: '{count} perangkat dalam daftar',
+    clearAll: 'Hapus semua',
+    noResults: 'Tidak ada perangkat yang cocok. Coba kata kunci lain atau hapus filtermu.',
+  },
+  detail: {
+    selectDates: 'Pilih tanggal sewamu untuk cek ketersediaan.',
+    notAvailable: 'Tidak tersedia untuk tanggal yang kamu pilih. Pilih tanggal lain.',
+    onlyOneLeft: 'Hanya tersisa 1 perangkat untuk tanggal yang dipilih',
+    available: 'Tersedia untuk tanggal yang kamu pilih',
+    unableToCheck: 'Gagal memeriksa ketersediaan. Silakan coba lagi.',
+    quantity: 'Jumlah',
+    decreaseQty: 'Kurangi jumlah',
+    increaseQty: 'Tambah jumlah',
+    addOnsTitle: 'Tambahan opsional',
+    perDayShort: '/hari',
+    rentalFee: 'Biaya sewa ({days}h × {qty})',
+    deposit: 'Jaminan',
+    totalDue: 'Total dibayar sebelum sewa',
+    rentNow: 'Sewa sekarang',
+    addToCart: 'Masukkan keranjang',
+    needHelp: 'Bingung memilih? Chat via WhatsApp',
+  },
+}
+
+const dictionaries: Record<Locale, Dictionary> = { en, id }
+export default dictionaries
+

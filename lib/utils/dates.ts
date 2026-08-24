@@ -3,7 +3,7 @@ export function toDate(value: Date | string): Date {
 }
 
 /** Whole rental days between two dates, rounding up to at least 1. */
-export function rentalDays(startsAt: Date, endsAt: Date): number {
+export function rentalDays(startsAt: Date | string, endsAt: Date | string): number {
   const start = toDate(startsAt).getTime()
   const end = toDate(endsAt).getTime()
   const ms = end - start

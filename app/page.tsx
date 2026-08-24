@@ -6,6 +6,7 @@ import { getCatalogProducts, getCategories } from '@/lib/data/catalog'
 import { formatMoneyCompact } from '@/lib/utils/money'
 import { getCompanyInfo } from '@/lib/services/settings'
 import { getHomeSections, getHomeSeo, listFaq, listTestimonials } from '@/lib/services/cms'
+import { getDictionary, getLocale, pick } from '@/lib/i18n'
 import type { HomeSection } from '@/lib/types/cms'
 
 export async function generateMetadata() {
@@ -20,9 +21,9 @@ export async function generateMetadata() {
 export const dynamic = 'force-dynamic'
 
 export default async function Home() {
-  const [categories, products, company, sections, faq, testimonials] = await Promise.all([
+  const [categories, products, company, sections, faq, testimonials, locale, dict] = await Promise.all([
     getCategories(), getCatalogProducts(), getCompanyInfo(),
-    getHomeSections(), listFaq(), listTestimonials(),
+    getHomeSections(), listFaq(), listTestimonials(), getLocale(), getDictionary(),
   ])
   const featured = products.slice(0, 6)
   const hero = sections.find((s): s is Extract<HomeSection, { type: 'hero' }> => s.type === 'hero')
@@ -30,20 +31,20 @@ export default async function Home() {
   const visibleTestimonials = testimonials.filter((t) => t.active).slice(0, 6)
 
   return (
-    <StorefrontShell whatsapp={company.whatsapp} company={company}>
+    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale}>
       <section className="mx-auto max-w-7xl px-5 pb-20 pt-14 lg:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="max-w-3xl">
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{hero?.kicker ?? 'Rent the tech you need, when you need it.'}</p>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{hero?.kicker ?? dict.home.heroKicker}</p>
             <h1 className="mt-4 font-serif text-5xl leading-tight tracking-tight sm:text-6xl lg:text-7xl">
-              {hero?.headline ?? 'Choose your gear. Book it. Enjoy.'}
+              {hero?.headline ?? dict.home.heroHeadline}
             </h1>
             <p className="mt-6 max-w-xl text-base leading-7 text-[#173b3b]/65">
-              {hero?.sub ?? 'Rent premium smartphones, action cameras, 360 cameras and creator gear for your trip, project, adventure or content.'}
+              {hero?.sub ?? dict.home.heroSub}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="/rent" className="rounded-full bg-[#173b3b] px-7 py-4 text-sm font-bold text-white transition hover:opacity-90">Browse devices</a>
-              <a href="/rent?category=action-cameras" className="rounded-full border border-[#173b3b]/15 bg-white px-7 py-4 text-sm font-bold transition hover:bg-[#e4eee8]">Browse cameras</a>
+              <a href="/rent" className="rounded-full bg-[#173b3b] px-7 py-4 text-sm font-bold text-white transition hover:opacity-90">{dict.home.browseDevices}</a>
+              <a href="/rent?category=action-cameras" className="rounded-full border border-[#173b3b]/15 bg-white px-7 py-4 text-sm font-bold transition hover:bg-[#e4eee8]">{dict.home.browseCameras}</a>
             </div>
           </div>
           <div className="relative">
@@ -76,26 +77,27 @@ export default async function Home() {
               name={p.name}
               slug={p.slug}
               imageUrl={p.imageUrl}
-              category={p.categoryNameEn ?? 'Rental'}
+              category={pick(locale, p.categoryNameEn ?? dict.home.rentalCategoryFallback, (p as unknown as { categoryNameId?: string }).categoryNameId ?? p.categoryNameEn ?? dict.home.rentalCategoryFallback)}
               price={formatMoneyCompact(p.dailyCents)}
               deposit={p.depositCents}
+              labels={{ perDay: dict.card.perDay, deposit: dict.card.deposit }}
             />
           ))}
         </div>
         {products.length === 0 && (
           <div className="mt-10 rounded-3xl border border-dashed border-[#173b3b]/15 p-10 text-center text-sm text-[#173b3b]/60">
-            No rental devices found yet. Add products and run <code className="font-mono">npm run db:seed</code>.
+            {dict.home.emptyProductsPre}<code className="font-mono">npm run db:seed</code>{dict.home.emptyProductsPost}
           </div>
         )}
       </section>
 
       {categories.length > 0 && (
         <section className="mx-auto max-w-7xl px-5 pb-24 lg:px-8">
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">Browse by</p>
-          <h2 className="mt-3 font-serif text-4xl tracking-tight">Categories</h2>
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{dict.home.browseBy}</p>
+          <h2 className="mt-3 font-serif text-4xl tracking-tight">{dict.home.categoriesTitle}</h2>
           <div className="mt-8 flex flex-wrap gap-3">
             {categories.map((c) => (
-              <a key={c.slug} href={`/rent?category=${c.slug}`} className="rounded-full border border-[#173b3b]/15 bg-white px-6 py-3 text-sm font-bold transition hover:bg-[#e4eee8]">{c.nameEn}</a>
+              <a key={c.slug} href={`/rent?category=${c.slug}`} className="rounded-full border border-[#173b3b]/15 bg-white px-6 py-3 text-sm font-bold transition hover:bg-[#e4eee8]">{pick(locale, c.nameEn, (c as unknown as { nameId?: string }).nameId ?? c.nameEn)}</a>
             ))}
           </div>
         </section>
@@ -103,8 +105,8 @@ export default async function Home() {
 
       {visibleTestimonials.length > 0 && (
         <section className="mx-auto max-w-7xl px-5 pb-24 lg:px-8">
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">Word on the street</p>
-          <h2 className="mt-3 font-serif text-4xl tracking-tight">What customers say</h2>
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{dict.home.testimonialsKicker}</p>
+          <h2 className="mt-3 font-serif text-4xl tracking-tight">{dict.home.testimonialsTitle}</h2>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {visibleTestimonials.map((t) => (
               <figure key={t.id} className="rounded-3xl border border-[#173b3b]/10 bg-white p-6">
@@ -119,8 +121,8 @@ export default async function Home() {
 
       {visibleFaq.length > 0 && (
         <section className="mx-auto max-w-7xl px-5 pb-24 lg:px-8">
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">Good to know</p>
-          <h2 className="mt-3 font-serif text-4xl tracking-tight">Frequently asked questions</h2>
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{dict.home.faqKicker}</p>
+          <h2 className="mt-3 font-serif text-4xl tracking-tight">{dict.home.faqTitle}</h2>
           <div className="mt-8">
             <FaqAccordion items={visibleFaq} />
           </div>

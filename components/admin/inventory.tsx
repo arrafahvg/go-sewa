@@ -2,12 +2,14 @@
 
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Plus, Package, Smartphone, ImagePlus, X } from 'lucide-react'
+import { Loader2, Plus, Package, Smartphone, ImagePlus, MapPin, X } from 'lucide-react'
 import { formatMoney } from '@/lib/utils/money'
 import type { AdminDevice } from '@/lib/data/admin'
+import type { TrackingView } from '@/app/admin/inventory/page'
 import {
   saveProductAction, uploadProductImageAction, savePricingRuleAction, deletePricingRuleAction, saveDeviceAction,
 } from '@/app/actions/inventory'
+import { saveTrackingConfigAction, pollDeviceLocationAction } from '@/app/actions/tracking'
 
 type PricingRuleKind = 'daily' | 'weekly' | 'monthly' | 'weekend' | 'seasonal' | 'promo' | 'custom'
 export type AdminProductView = {
@@ -41,17 +43,20 @@ function Notice({ error, success }: { error?: string | null; success?: string | 
 }
 
 export default function InventoryManager({
-  products, rules, devices,
+  products, rules, devices, trackingProviderConnected, tracking,
 }: {
   products: AdminProductView[]
   rules: AdminPricingRule[]
   devices: AdminDevice[]
+  trackingProviderConnected: boolean
+  tracking: TrackingView[]
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<'products' | 'devices'>('products')
   const refresh = () => router.refresh()
   const deviceCountByProduct = new Map<string, number>()
   for (const d of devices) deviceCountByProduct.set(d.productId, (deviceCountByProduct.get(d.productId) ?? 0) + 1)
+  const trackingByDevice = new Map(tracking.map((t) => [t.deviceId, t]))
 
   return (
     <div>
@@ -68,7 +73,7 @@ export default function InventoryManager({
 
       {tab === 'products'
         ? <ProductsPanel products={products} rules={rules} deviceCountByProduct={deviceCountByProduct} onChanged={refresh} />
-        : <DevicesPanel products={products} devices={devices} onChanged={refresh} />}
+        : <DevicesPanel products={products} devices={devices} onChanged={refresh} trackingProviderConnected={trackingProviderConnected} trackingByDevice={trackingByDevice} />}
     </div>
   )
 }
@@ -330,21 +335,28 @@ function PricingRulesPanel({ productId, productName, rules, onChanged }: {
 const DEVICE_STATUSES = ['available', 'maintenance', 'damaged', 'lost', 'retired', 'blocked'] as const
 type SettableStatus = (typeof DEVICE_STATUSES)[number]
 
-function DevicesPanel({ products, devices, onChanged }: {
+function DevicesPanel({ products, devices, onChanged, trackingProviderConnected, trackingByDevice }: {
   products: AdminProductView[]
   devices: AdminDevice[]
   onChanged: () => void
+  trackingProviderConnected: boolean
+  trackingByDevice: Map<string, TrackingView>
 }) {
   return (
     <div className="mt-6">
       <DeviceForm products={products} onDone={onChanged} />
+      {!trackingProviderConnected && (
+        <p className="mt-3 rounded-xl bg-[#f0ecd0] px-4 py-2.5 text-xs font-semibold text-[#7a6a2a]">
+          Tracking integration not configured — no location data is shown or collected. Connect a provider to enable per-unit tracking.
+        </p>
+      )}
       <div className="mt-6 overflow-x-auto rounded-2xl border border-[#173b3b]/10 bg-white">
-        <table className="w-full min-w-[860px] text-left text-sm">
+        <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="bg-[#f1eee7] text-xs text-[#173b3b]/50">
-            <tr>{['Asset code', 'Product', 'Status', 'Condition', 'IMEI / Serial', 'Storage', 'Battery', 'Set status'].map((h, i) => <th key={i} className="px-5 py-3 font-semibold">{h}</th>)}</tr>
+            <tr>{['Asset code', 'Product', 'Status', 'Condition', 'IMEI / Serial', 'Storage', 'Battery', 'Tracking', 'Set status'].map((h, i) => <th key={i} className="px-5 py-3 font-semibold">{h}</th>)}</tr>
           </thead>
           <tbody>
-            {devices.length === 0 && <tr><td colSpan={8} className="px-5 py-10 text-center text-sm text-[#173b3b]/50">No physical devices yet — add units so the product becomes bookable.</td></tr>}
+            {devices.length === 0 && <tr><td colSpan={9} className="px-5 py-10 text-center text-sm text-[#173b3b]/50">No physical devices yet — add units so the product becomes bookable.</td></tr>}
             {devices.map((d) => (
               <tr key={d.id} className="border-t border-[#173b3b]/8 transition hover:bg-[#faf8f2]">
                 <td className="px-5 py-4 font-mono text-xs font-bold">{d.assetCode}</td>
@@ -354,12 +366,85 @@ function DevicesPanel({ products, devices, onChanged }: {
                 <td className="px-5 py-4 font-mono text-xs">{d.imei ?? '—'}{d.serialNumber ? ` · ${d.serialNumber}` : ''}</td>
                 <td className="px-5 py-4 text-xs">{d.storage ?? '—'}</td>
                 <td className="px-5 py-4 text-xs">{d.batteryHealth != null ? `${d.batteryHealth}%` : '—'}</td>
+                <td className="px-5 py-4"><TrackingCell device={d} config={trackingByDevice.get(d.id) ?? null} providerConnected={trackingProviderConnected} onChanged={onChanged} /></td>
                 <td className="px-5 py-4"><StatusChanger device={d} onDone={onChanged} /></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+/** Honest per-unit tracking cell (§41): shows real provider state only (§80). */
+function TrackingCell({ device, config, providerConnected, onChanged }: {
+  device: AdminDevice
+  config: TrackingView | null
+  providerConnected: boolean
+  onChanged: () => void
+}) {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [externalId, setExternalId] = useState(config?.externalDeviceId ?? '')
+  const [enabled, setEnabled] = useState(config?.enabled ?? false)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  if (!providerConnected) return <span className="text-xs text-[#173b3b]/40">Not configured</span>
+
+  async function save() {
+    setBusy(true); setError(null); setMsg(null)
+    const res = await saveTrackingConfigAction({ deviceId: device.id, externalDeviceId: externalId || null, enabled })
+    setBusy(false)
+    if (!res.ok) { setError(res.error); return }
+    setOpen(false); onChanged()
+  }
+
+  async function poll() {
+    setBusy(true); setError(null); setMsg(null)
+    const res = await pollDeviceLocationAction(device.id)
+    setBusy(false)
+    if (!res.ok) { setError(res.error); return }
+    setMsg(res.stored ? 'New location stored.' : 'The provider reported no new location.')
+    router.refresh()
+  }
+
+  return (
+    <div className="text-xs">
+      {config?.enabled
+        ? (
+          <div className="space-y-0.5">
+            <p className="flex items-center gap-1 font-bold text-[#27604a]"><MapPin size={12} /> {config.provider}</p>
+            <p className="text-[#173b3b]/50">{config.lastRecordedAt ? `Last fix ${config.lastRecordedAt.toLocaleString()}` : 'No location received yet'}</p>
+          </div>
+        )
+        : <span className="text-[#173b3b]/50">{config ? 'Disabled' : '—'}</span>}
+      <div className="mt-1 flex items-center gap-2">
+        <button onClick={() => setOpen((v) => !v)} disabled={busy} className="font-bold text-[#387066] hover:underline">
+          {open ? 'Close' : config ? 'Edit' : 'Enroll'}
+        </button>
+        {config?.enabled && (
+          <button onClick={poll} disabled={busy} className="flex items-center gap-1 font-bold text-[#387066] hover:underline">
+            {busy && <Loader2 size={11} className="animate-spin" />} Refresh
+          </button>
+        )}
+      </div>
+      {msg && <p className="mt-1 font-semibold text-[#27604a]">{msg}</p>}
+      {error && <p role="alert" className="mt-1 font-bold text-[#a43d2b]">{error}</p>}
+      {open && (
+        <div className="mt-2 space-y-2 rounded-xl border border-[#173b3b]/15 bg-[#faf8f2] p-3">
+          <label className="block font-bold text-[#173b3b]/60">External tracker ID
+            <input value={externalId} onChange={(e) => setExternalId(e.target.value)} placeholder="ID inside the tracking system" className="mt-1 w-full rounded-lg border border-[#173b3b]/15 bg-white px-2 py-1.5" />
+          </label>
+          <label className="flex items-center gap-2 font-bold text-[#173b3b]/70">
+            <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="h-3.5 w-3.5 accent-[#e76f51]" />
+            Enabled
+          </label>
+          <button onClick={save} disabled={busy} className="w-full rounded-full bg-[#173b3b] px-3 py-1.5 font-bold text-white disabled:opacity-60">Save</button>
+        </div>
+      )}
     </div>
   )
 }

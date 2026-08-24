@@ -4,19 +4,23 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Menu, MessageCircle, ShoppingBag, X } from 'lucide-react'
 import { loadCart, cartCount } from '@/lib/cart'
+import LanguageSwitcher from '@/components/storefront/language-switcher'
+import type { Dictionary, Locale } from '@/lib/i18n/dictionaries'
 
-const NAV = [
-  { label: 'Home', href: '/' },
-  { label: 'Rent', href: '/rent' },
-  { label: 'Phones', href: '/rent?category=smartphones' },
-  { label: 'Cameras', href: '/rent?category=cameras' },
-  { label: 'Action Cameras', href: '/rent?category=action-cameras' },
-]
+const NAV_KEYS = [
+  { key: 'home', href: '/' },
+  { key: 'rent', href: '/rent' },
+  { key: 'phones', href: '/rent?category=smartphones' },
+  { key: 'cameras', href: '/rent?category=cameras' },
+  { key: 'actionCameras', href: '/rent?category=action-cameras' },
+] as const
 
 export default function StorefrontShell({
   children,
   whatsapp = '628123456789',
   company,
+  dict,
+  locale,
 }: {
   children: React.ReactNode
   whatsapp?: string
@@ -28,6 +32,8 @@ export default function StorefrontShell({
     instagramUrl?: string
     businessShortLocation?: string
   }
+  dict: Dictionary
+  locale: Locale
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [count, setCount] = useState(0)
@@ -61,17 +67,18 @@ export default function StorefrontShell({
             )}
           </Link>
           <nav className="hidden items-center gap-7 text-sm font-semibold text-[#173b3b]/75 md:flex">
-            {NAV.map((n) => (
+            {NAV_KEYS.map((n) => (
               <Link key={n.href} href={n.href} className="transition hover:text-[#e76f51]">
-                {n.label}
+                {dict.nav[n.key]}
               </Link>
             ))}
           </nav>
           <div className="flex items-center gap-3">
+            <LanguageSwitcher locale={locale} />
             <Link
               href="/checkout"
               className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[#173b3b]/10 bg-white transition hover:bg-[#e4eee8]"
-              aria-label="Rental cart"
+              aria-label={dict.shell.cartAria}
             >
               <ShoppingBag size={18} />
               {count > 0 && (
@@ -83,7 +90,7 @@ export default function StorefrontShell({
             <button
               onClick={() => setMenuOpen((v) => !v)}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-[#173b3b]/10 bg-white md:hidden"
-              aria-label="Menu"
+              aria-label={dict.shell.menuAria}
             >
               {menuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
@@ -91,14 +98,14 @@ export default function StorefrontShell({
         </div>
         {menuOpen && (
           <nav className="flex flex-col gap-4 border-t border-[#173b3b]/10 bg-[#f8f6f1] px-5 py-5 md:hidden">
-            {NAV.map((n) => (
+            {NAV_KEYS.map((n) => (
               <Link
                 key={n.href}
                 href={n.href}
                 onClick={() => setMenuOpen(false)}
                 className="text-sm font-semibold text-[#173b3b]/80"
               >
-                {n.label}
+                {dict.nav[n.key]}
               </Link>
             ))}
           </nav>
@@ -155,7 +162,7 @@ export default function StorefrontShell({
         rel="noreferrer"
         className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-xl transition hover:-translate-y-1"
       >
-        <MessageCircle size={18} /> Chat us
+        <MessageCircle size={18} /> {dict.shell.chatUs}
       </a>
     </div>
   )

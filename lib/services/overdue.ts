@@ -32,6 +32,19 @@ export async function markOverdueRentals(): Promise<{ updatedBookings: number }>
          WHERE a.device_id = d.id AND a.booking_id = ANY($1::text[]) AND a.released_at IS NULL`,
         [ids],
       )
+      // Notify all staff about each newly-overdue rental (same pattern as the
+      // new-order notification in services/bookings.ts) — atomic with the flip.
+      await client.query(
+        `INSERT INTO notifications (id, user_id, kind, title, body, read, created_at)
+         SELECT $1 || '-' || b.id || '-' || u.id, u.id, 'warning',
+                'Rental overdue: ' || b.number,
+                'Booking ' || b.number || ' passed its return window (' ||
+                  to_char(b.ends_at, 'YYYY-MM-DD HH24:MI') || '). Follow up with the customer.',
+                false, now()
+         FROM bookings b CROSS JOIN "user" u
+         WHERE b.id = ANY($1::text[]) AND u.role IN ('owner','admin','staff')`,
+        [ids],
+      )
       updated = ids.length
     }
 

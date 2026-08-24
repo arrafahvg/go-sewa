@@ -13,18 +13,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
+import { getDictionary, getLocale } from '@/lib/i18n'
 export const dynamic = 'force-dynamic'
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const [product, company] = await Promise.all([getProductBySlug(slug), getCompanyInfo()])
+  const [product, company, locale, dict] = await Promise.all([getProductBySlug(slug), getCompanyInfo(), getLocale(), getDictionary()])
   if (!product) notFound()
 
   const addOns = await getAddOns()
 
   return (
-    <StorefrontShell whatsapp={company.whatsapp} company={company}>
-      <ProductDetail product={product} addOns={addOns} whatsapp={company.whatsapp} />
+    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale}>
+      <ProductDetail product={product} addOns={addOns} whatsapp={company.whatsapp} dict={dict} />
     </StorefrontShell>
   )
 }

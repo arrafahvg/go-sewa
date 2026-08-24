@@ -6,34 +6,56 @@ import { Search, SlidersHorizontal, X } from 'lucide-react'
 import ProductCard from '@/components/storefront/product-card'
 import { formatMoneyCompact } from '@/lib/utils/money'
 import type { CatalogProduct, CatalogCategory } from '@/lib/data/catalog'
+import type { Dictionary } from '@/lib/i18n/dictionaries'
 
 type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name'
 
-/** Price-band quick filters in Rp (daily rate). -1 = any. */
-const PRICE_BANDS: { key: string; label: string; min?: number; max?: number }[] = [
-  { key: 'any', label: 'Any price', max: -1 },
-  { key: 'under50', label: 'Under Rp 50k', max: 50_000 },
-  { key: '50to100', label: 'Rp 50k – 100k', min: 50_000, max: 100_000 },
-  { key: '100to150', label: 'Rp 100k – 150k', min: 100_000, max: 150_000 },
-  { key: 'over150', label: 'Over Rp 150k', min: 150_000 },
+/** Price-band quick filters in Rp (daily rate). Labels come from the dictionary (§9). */
+const PRICE_BANDS: { key: string; min?: number; max?: number }[] = [
+  { key: 'any', max: -1 },
+  { key: 'under50', max: 50_000 },
+  { key: '50to100', min: 50_000, max: 100_000 },
+  { key: '100to150', min: 100_000, max: 150_000 },
+  { key: 'over150', min: 150_000 },
 ]
 
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: 'featured', label: 'Featured' },
-  { key: 'price-asc', label: 'Price: low to high' },
-  { key: 'price-desc', label: 'Price: high to low' },
-  { key: 'name', label: 'Name A–Z' },
-]
+const SORT_OPTIONS: SortKey[] = ['featured', 'price-asc', 'price-desc', 'name']
+
+function bandLabel(dict: Dictionary, key: string): string {
+  switch (key) {
+    case 'under50': return dict.rent.bandUnder50
+    case '50to100': return dict.rent.band50to100
+    case '100to150': return dict.rent.band100to150
+    case 'over150': return dict.rent.bandOver150
+    default: return dict.rent.bandAny
+  }
+}
+
+function sortLabel(dict: Dictionary, key: SortKey): string {
+  switch (key) {
+    case 'price-asc': return dict.rent.sortPriceAsc
+    case 'price-desc': return dict.rent.sortPriceDesc
+    case 'name': return dict.rent.sortName
+    default: return dict.rent.sortFeatured
+  }
+}
+
 export default function RentExplorer({
   products,
   categories,
   initialCategory = '',
   initialSort = 'featured',
+  dict,
+  categoryName,
 }: {
   products: CatalogProduct[]
   categories: CatalogCategory[]
   initialCategory?: string
   initialSort?: string
+  /** Localized UI strings (§9) — passed from the server page. */
+  dict: Dictionary
+  /** Localized category name resolver for filter chips. */
+  categoryName: (c: CatalogCategory) => string
 }) {
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
@@ -91,6 +113,7 @@ export default function RentExplorer({
       results={results}
       hasFilters={hasFilters}
       clearAll={clearAll}
+      dict={dict}
     />
   )
 
@@ -104,8 +127,9 @@ function RentExplorerView(props: {
   results: CatalogProduct[]
   hasFilters: boolean
   clearAll: () => void
+  dict: Dictionary
 }) {
-  const { q, setQ, sort, setSort, category, setCategory, categories, priceKey, setPriceKey, depositFree, setDepositFree, results, hasFilters, clearAll } = props
+  const { q, setQ, sort, setSort, category, setCategory, categories, priceKey, setPriceKey, depositFree, setDepositFree, results, hasFilters, clearAll, dict } = props
 
   return (
     <div>
@@ -115,20 +139,20 @@ function RentExplorerView(props: {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search devices, specs…"
-            aria-label="Search rental devices"
+            placeholder={dict.rent.searchPlaceholder}
+            aria-label={dict.rent.searchAria}
             className="w-full rounded-full border border-[#173b3b]/15 bg-white py-3 pl-11 pr-10 text-sm font-normal outline-none focus:border-[#e76f51]"
           />
-          {q && <button onClick={() => setQ('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-[#173b3b]/50"><X size={15} /></button>}
+          {q && <button onClick={() => setQ('')} aria-label={dict.rent.clearAll} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#173b3b]/50"><X size={15} /></button>}
         </div>
-        <label className="sr-only" htmlFor="rent-sort">Sort devices</label>
+        <label className="sr-only" htmlFor="rent-sort">{dict.rent.sortLabel}</label>
         <select
           id="rent-sort"
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
           className="w-full sm:w-auto rounded-full border border-[#173b3b]/15 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-[#e76f51]"
         >
-          {SORT_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+          {SORT_OPTIONS.map((key) => <option key={key} value={key}>{sortLabel(dict, key)}</option>)}
         </select>
       </div>
 
@@ -136,16 +160,19 @@ function RentExplorerView(props: {
         category={category} setCategory={setCategory} categories={categories}
         priceKey={priceKey} setPriceKey={setPriceKey}
         depositFree={depositFree} setDepositFree={setDepositFree}
+        dict={dict} categoryName={categoryName}
       />
 
       <p className="mt-4 text-xs text-[#173b3b]/55">
-        {results.length === 1 ? '1 device' : `${results.length} devices`} {hasFilters ? 'matching your filters' : 'in the lineup'}
-        {hasFilters && <button onClick={clearAll} className="ml-2 font-bold text-[#387066] underline-offset-2 hover:underline">Clear all</button>}
+        {results.length === 1
+          ? dict.rent.oneDevice
+          : (hasFilters ? dict.rent.devicesMatching : dict.rent.devicesInLineup).replace('{count}', String(results.length))}
+        {hasFilters && <button onClick={clearAll} className="ml-2 font-bold text-[#387066] underline-offset-2 hover:underline">{dict.rent.clearAll}</button>}
       </p>
 
       {results.length === 0 ? (
         <div className="mt-10 rounded-3xl border border-dashed border-[#173b3b]/15 p-10 text-center text-sm text-[#173b3b]/60">
-          No devices match your search. Try a different keyword or clear your filters.
+          {dict.rent.noResults}
         </div>
       ) : (
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -155,9 +182,10 @@ function RentExplorerView(props: {
               name={p.name}
               slug={p.slug}
               imageUrl={p.imageUrl}
-              category={p.categoryNameEn ?? 'Rental'}
+              category={p.categoryNameEn ?? dict.home.rentalCategoryFallback}
               price={formatMoneyCompact(p.dailyCents)}
               deposit={p.depositCents}
+              labels={{ perDay: dict.card.perDay, deposit: dict.card.deposit }}
             />
           ))}
         </div>
@@ -166,26 +194,28 @@ function RentExplorerView(props: {
   )
 }
 
-function FiltersRow({ category, setCategory, categories, priceKey, setPriceKey, depositFree, setDepositFree }: {
+function FiltersRow({ category, setCategory, categories, priceKey, setPriceKey, depositFree, setDepositFree, dict, categoryName }: {
   category: string; setCategory: Dispatch<SetStateAction<string>>
   categories: CatalogCategory[]
   priceKey: string; setPriceKey: Dispatch<SetStateAction<string>>
   depositFree: boolean; setDepositFree: Dispatch<SetStateAction<boolean>>
+  dict: Dictionary
+  categoryName: (c: CatalogCategory) => string
 }) {
   return (
     <>
       <div className="mt-5 flex flex-wrap gap-2">
-        <button onClick={() => setCategory('')} className={`rounded-full px-4 py-2 text-xs font-bold transition ${category === '' ? 'bg-[#173b3b] text-white' : 'border border-[#173b3b]/15 bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>All</button>
+        <button onClick={() => setCategory('')} className={`rounded-full px-4 py-2 text-xs font-bold transition ${category === '' ? 'bg-[#173b3b] text-white' : 'border border-[#173b3b]/15 bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>{dict.rent.allCategories}</button>
         {categories.map((c) => (
-          <button key={c.slug} onClick={() => setCategory(category === c.slug ? '' : c.slug)} className={`rounded-full px-4 py-2 text-xs font-bold transition ${category === c.slug ? 'bg-[#173b3b] text-white' : 'border border-[#173b3b]/15 bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>{c.nameEn}</button>
+          <button key={c.slug} onClick={() => setCategory(category === c.slug ? '' : c.slug)} className={`rounded-full px-4 py-2 text-xs font-bold transition ${category === c.slug ? 'bg-[#173b3b] text-white' : 'border border-[#173b3b]/15 bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>{categoryName(c)}</button>
         ))}
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <SlidersHorizontal size={15} className="text-[#173b3b]/40" />
         {PRICE_BANDS.map((b) => (
-          <button key={b.key} onClick={() => setPriceKey(b.key)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${priceKey === b.key ? 'bg-[#173b3b] text-white' : 'border border-[#173b3b]/15 bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>{b.label}</button>
+          <button key={b.key} onClick={() => setPriceKey(b.key)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${priceKey === b.key ? 'bg-[#173b3b] text-white' : 'border border-[#173b3b]/15 bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>{bandLabel(dict, b.key)}</button>
         ))}
-        <button onClick={() => setDepositFree((v) => !v)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${depositFree ? 'bg-[#173b3b] text-white' : 'border border-[#173b3b]/15 bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>No deposit</button>
+        <button onClick={() => setDepositFree((v) => !v)} className={`rounded-full px-3 py-1.5 text-xs font-bold ${depositFree ? 'bg-[#173b3b] text-white' : 'border border-[#173b3b]/15 bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>{dict.rent.noDeposit}</button>
       </div>
     </>
   )

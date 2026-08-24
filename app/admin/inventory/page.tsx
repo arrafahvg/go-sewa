@@ -1,8 +1,20 @@
+import { db } from '@/lib/db'
+import { deviceTrackingConfigurations, deviceTrackingEvents } from '@/lib/db/schema'
+import { isTrackingConfigured } from '@/lib/services/tracking'
 import type { Metadata } from 'next'
 import InventoryManager from '@/components/admin/inventory'
 import type { AdminProductView, AdminPricingRule } from '@/components/admin/inventory'
 import { getAdminDevices } from '@/lib/data/admin'
 import { listProducts, listPricingRules } from '@/lib/services/inventory'
+
+/** Per-device tracking view model passed down to the devices table (§41). */
+export type TrackingView = {
+  deviceId: string
+  provider: string
+  externalDeviceId: string | null
+  enabled: boolean
+  lastRecordedAt: Date | null
+}
 
 export const metadata: Metadata = {
   title: 'Go-Sewa Admin — Inventory',
@@ -12,11 +24,27 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function InventoryPage() {
-  const [productRows, ruleRows, devices] = await Promise.all([
+  const [productRows, ruleRows, devices, trackingProviderConnected] = await Promise.all([
     listProducts(),
     listPricingRules(),
     getAdminDevices(),
+    isTrackingConfigured(),
   ])
+
+  const configs = await db.select().from(deviceTrackingConfigurations)
+  const events = await db.select().from(deviceTrackingEvents)
+  const lastEventByDevice = new Map<string, Date>()
+  for (const e of events) {
+    const prev = lastEventByDevice.get(e.deviceId)
+    if (!prev || e.recordedAt > prev) lastEventByDevice.set(e.deviceId, e.recordedAt)
+  }
+  const tracking: TrackingView[] = configs.map((c) => ({
+    deviceId: c.deviceId,
+    provider: c.provider,
+    externalDeviceId: c.externalDeviceId,
+    enabled: c.enabled,
+    lastRecordedAt: lastEventByDevice.get(c.deviceId) ?? null,
+  }))
 
   const products: AdminProductView[] = productRows.map((p) => ({
     id: p.id,
@@ -46,7 +74,7 @@ export default async function InventoryPage() {
         <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">
           <a href="/admin" className="hover:underline">Admin</a> / Inventory
         </p>
-        <InventoryManager products={products} rules={rules} devices={devices} />
+        <InventoryManager products={products} rules={rules} devices={devices} trackingProviderConnected={trackingProviderConnected} tracking={tracking} />
       </div>
     </div>
   )

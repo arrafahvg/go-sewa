@@ -127,7 +127,23 @@ a product's price later never mutates historical rentals.
 
 ## Known limitations / next steps
 
-- i18n strings are not yet extracted into locale files (§9) — biggest remaining gap.
+- **i18n (§9) — partially done**: ID/EN dictionaries (`lib/i18n/`) now drive the
+  storefront shell, home, `/rent` list and `/rent/[slug]` detail with an ID/EN
+  switcher (cookie `go_lang`, falls back to the `default_language` setting).
+  Still pending: checkout flow strings, `/account` pages, and the admin console.
+- **Tests**: Vitest unit suite live (`npm test`) covering money formatting,
+  date/range helpers and the tracking provider contract. Service-level
+  integration tests (bookings/availability against a test DB) are a next step.
+- **Tracking (§41)**: provider abstraction + schema + admin enrollment UI are
+  live; no real provider is connected yet, so every surface honestly reports
+  "Tracking integration not configured" and no location data is collected.
+  Connect one by implementing `TrackingProvider` in
+  `lib/services/tracking/provider.ts`.
+- **Cron (§17)**: overdue sweep is scheduled three ways — Vercel Cron
+  (`vercel.json` → hourly `/api/cron/overdue`), an optional in-process scheduler
+  (`ENABLE_INTERNAL_CRON=1`, 15-min interval via `instrumentation.ts`), and an
+  opportunistic sweep on admin dashboard load. Staff receive notifications when
+  rentals flip to overdue.
 - Account management lives in the admin console at `/admin/settings/account`
   (change email, change password, session management); the storefront header no
   longer exposes a public "My account" entry point (the `/account` routes remain

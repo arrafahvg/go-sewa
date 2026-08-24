@@ -3,7 +3,7 @@ import { ArrowUpRight } from 'lucide-react'
 import { formatMoney } from '@/lib/utils/money'
 
 export default function ProductCard({
-  name, slug, imageUrl, category, price, deposit,
+  name, slug, imageUrl, category, price, deposit, labels,
 }: {
   name: string
   slug: string
@@ -11,6 +11,8 @@ export default function ProductCard({
   category: string
   price: string
   deposit: number
+  /** Localized card labels (§9) — passed from the server dictionary. */
+  labels: { perDay: string; deposit: string }
 }) {
   return (
     <Link
@@ -42,11 +44,11 @@ export default function ProductCard({
         <div className="mt-4 flex items-end justify-between">
           <div>
             <p className="text-lg font-bold">{price}</p>
-            <p className="text-xs text-[#173b3b]/50">per day</p>
+            <p className="text-xs text-[#173b3b]/50">{labels.perDay}</p>
           </div>
           {deposit > 0 && (
             <p className="text-[10px] text-[#173b3b]/50">
-              Deposit {formatMoney(deposit)}
+              {labels.deposit} {formatMoney(deposit)}
             </p>
           )}
         </div>

@@ -1,5 +1,5 @@
 import {
-  pgTable, text, integer, boolean, timestamp, index, jsonb, pgEnum,
+  pgTable, text, integer, boolean, timestamp, index, jsonb, pgEnum, doublePrecision,
 } from 'drizzle-orm/pg-core'
 
 export const deviceStatusEnum = pgEnum('device_status', [
@@ -566,9 +566,43 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   payment_bank_accounts: '[]',
   payment_qris_image_url: '',
   payment_instructions: '',
+  /** Tracking provider identifier (§41) — empty means no provider connected;
+   *  the tracking UI then shows an explicit "not configured" state (§80). */
+  tracking_provider: '',
 }
 
 // --- Ops / audit ---------------------------------------------------------------
+/** Per-device tracking configuration (§41). A row exists only when staff enrolled
+ *  the unit with a provider; location data comes exclusively from real providers —
+ *  never synthesized (§80). */
+export const deviceTrackingConfigurations = pgTable('device_tracking_configurations', {
+  id: text('id').primaryKey(),
+  deviceId: text('device_id').notNull().unique(),
+  /** Provider identifier — e.g. an MDM system, GPS tracker vendor or manufacturer API. */
+  provider: text('provider').notNull(),
+  /** The device's id inside the external tracking system. */
+  externalDeviceId: text('external_device_id'),
+  enabled: boolean('enabled').notNull().default(false),
+  /** Free-text note about consent / privacy basis for tracking this unit (§41). */
+  consentNote: text('consent_note'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
+/** Location/telemetry records pushed by a real tracking provider (§41). */
+export const deviceTrackingEvents = pgTable('device_tracking_events', {
+  id: text('id').primaryKey(),
+  deviceId: text('device_id').notNull(),
+  provider: text('provider').notNull(),
+  latitude: doublePrecision('latitude'),
+  longitude: doublePrecision('longitude'),
+  accuracyMeters: doublePrecision('accuracy_meters'),
+  /** Raw provider payload kept verbatim for auditing. */
+  payload: jsonb('payload').$type<Record<string, unknown>>().default({}),
+  recordedAt: timestamp('recorded_at').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [index('tracking_event_device_idx').on(t.deviceId, t.recordedAt)])
+
 export const activityLogs = pgTable('activity_logs', {
   id: text('id').primaryKey(),
   userId: text('user_id'),
