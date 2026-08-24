@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { Check, Loader2, Plus, Trash2 } from 'lucide-react'
 import { createManualAgreementAction } from '@/app/actions/agreements'
+import CustomerPicker from '@/components/admin/customer-picker'
 
-type ExistingCustomer = { id: string; name: string; phone: string | null }
+type ExistingCustomer = { id: string; name: string; phone: string | null; email?: string | null }
 type Line = { description: string; quantity: number }
 
 /**
@@ -14,6 +15,7 @@ type Line = { description: string; quantity: number }
  * active template by the service; draft is printable/signable/shareable.
  */
 export default function ManualAgreementForm({ customers }: { customers: ExistingCustomer[] }) {
+  const [customerId, setCustomerId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -33,6 +35,7 @@ export default function ManualAgreementForm({ customers }: { customers: Existing
     if (valid.length === 0) { setError('Add at least one equipment/terms line.'); return }
     setBusy(true); setError('')
     const res = await createManualAgreementAction({
+      customerId,
       customerName: name.trim(), customerPhone: phone.trim() || null, customerEmail: email.trim() || null,
       lines: valid.map((l) => ({ description: l.description.trim(), quantity: Math.max(1, Number(l.quantity) || 1) })),
     })
@@ -57,18 +60,14 @@ export default function ManualAgreementForm({ customers }: { customers: Existing
       )}
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <label className="block text-xs font-bold text-[#173b3b]/60">Customer name
-          <input list="manual-agreement-customers" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Type a new name or pick existing" required />
-        </label>
-        <datalist id="manual-agreement-customers">
-          {customers.map((c) => <option key={c.id} value={c.name}>{c.phone ? ` · ${c.phone}` : ''}</option>)}
-        </datalist>
-        <label className="block text-sm font-bold text-[#173b3b]/60">WhatsApp / phone
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} placeholder="+62 812 ..." />
-        </label>
-        <label className="block text-sm font-bold text-[#173b3b]/60">Email (optional)
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} placeholder="name@example.com" />
-        </label>
+        <div className="sm:col-span-2">
+          <p className="mb-2 text-xs font-bold text-[#173b3b]/60">Customer</p>
+          <CustomerPicker
+            customers={customers}
+            value={{ customerId, name, phone, email }}
+            onSelect={(v) => { setCustomerId(v.customerId); setName(v.name); setPhone(v.phone); setEmail(v.email) }}
+          />
+        </div>
       </div>
 
       <div className="mt-6">

@@ -92,10 +92,12 @@ to book the last unit cannot both succeed.
 The public checkout and the admin walk-in flow call the **same** service; only
 the `channel` differs (`online` vs `in_store` / `phone` / `whatsapp`).
 
-The walk-in "New rental" customer field is a free-text input backed by a searchable
-datalist of existing customers (§19B step 1), so staff can create a brand-new customer
-inline (by name + WhatsApp number) or pick an existing one. The booking service
-reuses a customer by phone/name or inserts a new record in the same transaction.
+The walk-in "New rental" customer field uses a dedicated `CustomerPicker`
+component (§19B step 1) with two separated modes: **Existing customer** — a
+searchable list that auto-fills name, phone and email and reuses the picked
+customer id — or **New customer** with blank inline fields. The booking service
+then reuses the exact customer record or creates a new one in the same
+transaction.
 
 ### Device lifecycle
 
@@ -249,4 +251,19 @@ User-reported items, tracked here until fixed:
    (`public/hero-placeholder.svg`) so the hero never looks unfinished. The
    placeholder is demo fallback content — replace it with real imagery via the
    admin UI.
+3. **Picking an existing customer in the walk-in / manual invoice / manual
+   agreement forms did not auto-fill their phone number, and the plain
+   `<datalist>` selector rendered inconsistently across browsers.** → Fixed:
+   all three forms now use a dedicated `CustomerPicker` component with two
+   clearly separated modes — *Existing customer* (searchable list; picking one
+   auto-fills name + phone + email and reuses that exact customer id) and
+   *New customer* (blank fields). The walk-in form also passes the picked id to
+   the identity-document upload so collateral attaches to the right record.
+4. **Deposit/payment "Amount (Rp)" inputs were inconsistent with every other
+   money input** (they defaulted to raw ×100 minor-unit values and stored typed
+   Rupiah without conversion, risking 100× errors), and a deposit error message
+   displayed amounts 100× too large. → Fixed: shared `rupiahToCents()` /
+   `centsToRupiah()` helpers now enforce the single convention everywhere
+   (staff types plain Rupiah → stored ×100 minor units → rendered as `Rp` via
+   `formatMoney`). All money remains IDR/Rupiah end-to-end.
 

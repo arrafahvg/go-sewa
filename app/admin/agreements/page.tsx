@@ -25,7 +25,7 @@ export default async function AgreementsPage() {
         </p>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-serif text-3xl tracking-tight">Rental agreements</h1>
-          <ManualAgreementPanel customers={customers.map((c) => ({ id: c.id, name: c.name, phone: c.phone }))} />
+          <ManualAgreementPanel customers={customers.map((c) => ({ id: c.id, name: c.name, phone: c.phone, email: c.email }))} />
         </div>
 
         <div className="mt-6 overflow-x-auto rounded-2xl border border-[#173b3b]/10 bg-white">

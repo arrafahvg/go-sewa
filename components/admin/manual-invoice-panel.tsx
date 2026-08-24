@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import ManualInvoiceForm from './manual-invoice-form'
 
-type ExistingCustomer = { id: string; name: string; phone: string | null }
+type ExistingCustomer = { id: string; name: string; phone: string | null; email?: string | null }
 
 /** "New manual invoice" toggle on the /admin/invoices list (§35). */
 export default function ManualInvoicePanel({ customers }: { customers: ExistingCustomer[] }) {

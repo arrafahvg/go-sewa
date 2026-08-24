@@ -2,6 +2,7 @@ import { eq, desc, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookings, deposits, depositTransactions } from '@/lib/db/schema'
 import { logActivity, uid } from './audit'
+import { formatMoney } from '@/lib/utils/money'
 
 /**
  * Deposit lifecycle management (§13, §16).
@@ -122,7 +123,7 @@ function heldTxnsZero(t?: { heldTxns?: number }): boolean {
 }
 
 function formatRp(cents: number): string {
-  return `Rp ${cents.toLocaleString('id-ID')}`
+  return formatMoney(cents)
 }
 
 /** Current deposit state for a booking (null when none exists yet). */

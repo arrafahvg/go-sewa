@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import ManualAgreementForm from './manual-agreement-form'
 
-type ExistingCustomer = { id: string; name: string; phone: string | null }
+type ExistingCustomer = { id: string; name: string; phone: string | null; email?: string | null }
 
 /** "New manual agreement" toggle on the /admin/agreements list (§21/§35). */
 export default function ManualAgreementPanel({ customers }: { customers: ExistingCustomer[] }) {

@@ -10,10 +10,12 @@ import { uploadIdentityDocumentAction } from '@/app/actions/documents'
  * server action; the returned document id is required by the booking actions.
  */
 export default function IdentityDocumentUpload({
-  customerName, customerPhone, onUploaded,
+  customerName, customerPhone, customerId, onUploaded,
 }: {
   customerName: string
   customerPhone?: string
+  /** When an existing customer was picked, attach the document straight to that record. */
+  customerId?: string | null
   onUploaded: (result: { documentId: string; customerId: string }) => void
 }) {
   const [idType, setIdType] = useState<'ktp' | 'sim'>('ktp')
@@ -44,6 +46,7 @@ export default function IdentityDocumentUpload({
     if (!file) { setError('Take or choose a photo of the document first.'); return }
     setBusy(true); setError('')
     const res = await uploadIdentityDocumentAction({
+      customerId: customerId ?? undefined,
       customerName, customerPhone,
       idType, idNumber: idNumber.trim(),
       fileBase64: file.base64, mimeType: file.mimeType,

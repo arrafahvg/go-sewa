@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Banknote, CircleDollarSign, Loader2, Shield } from 'lucide-react'
-import { formatMoney } from '@/lib/utils/money'
+import { formatMoney, rupiahToCents, centsToRupiah } from '@/lib/utils/money'
 import { recordDepositAction } from '@/app/actions/deposits'
 import { recordPaymentAction } from '@/app/actions/payments'
 
@@ -39,9 +39,9 @@ export default function DepositPaymentPanel({
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [note, setNote] = useState('')
-  const [txnAmount, setTxnAmount] = useState(`${Math.max(0, depositCents) || ''}`)
+  const [txnAmount, setTxnAmount] = useState(`${centsToRupiah(Math.max(0, depositCents)) || ''}`)
   const [payMethod, setPayMethod] = useState('cash')
-  const [payAmount, setPayAmount] = useState(`${Math.max(0, totalCents - paidCents)}`)
+  const [payAmount, setPayAmount] = useState(`${centsToRupiah(Math.max(0, totalCents - paidCents))}`)
 
   const run = async (key: string, fn: () => Promise<{ ok: boolean; error?: string }>) => {
     setBusy(key); setError('')
@@ -92,12 +92,12 @@ export default function DepositPaymentPanel({
             className="rounded-full bg-[#173b3b] px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
           >{busy === 'hold' && <Loader2 size={13} className="inline animate-spin" />} Hold deposit</button>
           <button
-            onClick={() => run('ret', async () => recordDepositAction({ bookingId, kind: 'returned', amountCents: Number(txnAmount) || 0, note }))}
+            onClick={() => run('ret', async () => recordDepositAction({ bookingId, kind: 'returned', amountCents: rupiahToCents(txnAmount), note }))}
             disabled={busy !== '' || !Number(txnAmount)}
             className="rounded-full border border-[#173b3b]/15 px-4 py-2 text-xs font-bold hover:bg-[#e4eee8] disabled:opacity-50"
           >{busy === 'ret' && <Loader2 size={13} className="inline animate-spin" />} Return</button>
           <button
-            onClick={() => run('forf', async () => recordDepositAction({ bookingId, kind: 'forfeited', amountCents: Number(txnAmount) || 0, note }))}
+            onClick={() => run('forf', async () => recordDepositAction({ bookingId, kind: 'forfeited', amountCents: rupiahToCents(txnAmount), note }))}
             disabled={busy !== '' || !Number(txnAmount)}
             className="rounded-full border border-[#a43d2b]/40 px-4 py-2 text-xs font-bold text-[#a43d2b] hover:bg-[#f5d9d3] disabled:opacity-50"
           >{busy === 'for' && <Loader2 size={13} className="inline animate-spin" />} Forfeit</button>
@@ -136,7 +136,7 @@ export default function DepositPaymentPanel({
         </div>
 
         <button
-          onClick={() => run('pay', async () => recordPaymentAction({ bookingId, method: payMethod, amountCents: Number(payAmount) || 0, note }))}
+          onClick={() => run('pay', async () => recordPaymentAction({ bookingId, method: payMethod, amountCents: rupiahToCents(payAmount), note }))}
           disabled={busy !== '' || !Number(payAmount)}
           className="mt-3 flex items-center gap-2 rounded-full bg-[#e76f51] px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50"
         >{busy === 'pay' && <Loader2 size={13} className="inline animate-spin" />} Record payment</button>

@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Check, Loader2, Plus, Trash2, X } from 'lucide-react'
+import { Check, Loader2, Plus, Trash2 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils/money'
 import { createManualInvoiceAction } from '@/app/actions/invoices'
+import CustomerPicker from '@/components/admin/customer-picker'
 
-type ExistingCustomer = { id: string; name: string; phone: string | null }
+type ExistingCustomer = { id: string; name: string; phone: string | null; email?: string | null }
 type Line = { description: string; quantity: number; unitPrice: number }
 
 /**
@@ -15,6 +16,7 @@ type Line = { description: string; quantity: number; unitPrice: number }
  * amount fields take plain Rupiah; the server action converts to minor units.
  */
 export default function ManualInvoiceForm({ customers }: { customers: ExistingCustomer[] }) {
+  const [customerId, setCustomerId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -39,6 +41,7 @@ export default function ManualInvoiceForm({ customers }: { customers: ExistingCu
     if (total <= 0) { setError('Invoice total must be greater than zero.'); return }
     setBusy(true); setError('')
     const res = await createManualInvoiceAction({
+      customerId,
       customerName: name.trim(), customerPhone: phone.trim() || null, customerEmail: email.trim() || null,
       dueAt: dueAt || null,
       lines: valid.map((l) => ({ description: l.description.trim(), quantity: Number(l.quantity) || 1, unitPrice: Number(l.unitPrice) || 0 })),
@@ -63,18 +66,14 @@ return (
       )}
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <label className="block text-xs font-bold text-[#173b3b]/60">Customer name
-          <input list="manual-invoice-customers" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Type a new name or pick existing" required />
-        </label>
-        <datalist id="manual-invoice-customers">
-          {customers.map((c) => <option key={c.id} value={c.name}>{c.phone ? ` · ${c.phone}` : ''}</option>)}
-        </datalist>
-        <label className="block text-sm font-bold text-[#173b3b]/60">WhatsApp / phone
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} placeholder="+62 812 ..." />
-        </label>
-        <label className="block text-sm font-bold text-[#173b3b]/60">Email (optional)
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} placeholder="name@example.com" />
-        </label>
+        <div className="sm:col-span-2">
+          <p className="mb-2 text-xs font-bold text-[#173b3b]/60">Customer</p>
+          <CustomerPicker
+            customers={customers}
+            value={{ customerId, name, phone, email }}
+            onSelect={(v) => { setCustomerId(v.customerId); setName(v.name); setPhone(v.phone); setEmail(v.email) }}
+          />
+        </div>
         <label className="block text-sm font-bold text-[#173b3b]/60">Due date (optional)
           <input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} className={inputCls} />
           <span className="mt-1 block text-xs text-[#173b3b]/40">Leave blank to issue without a due date.</span>

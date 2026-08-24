@@ -8,11 +8,12 @@ import type { BookingRow } from '@/lib/data/admin'
 import { adminGetFreeDevices } from '@/app/actions/admin'
 import { submitAdminBooking } from '@/app/actions/bookings'
 import IdentityDocumentUpload from '@/components/identity-document-upload'
+import CustomerPicker, { type PickedCustomer } from '@/components/admin/customer-picker'
 import { todayStr, addDaysStr } from '@/lib/cart'
 
 type Bookings = BookingRow[]
 type Product = { id: string; slug: string; name: string; depositCents: number; dailyCents: number }
-type Customer = { id: string; name: string; phone: string | null }
+type Customer = { id: string; name: string; phone: string | null; email?: string | null }
 
 function StatusBadge({ status }: { status: string }) {
   const tone = ['completed', 'paid'].includes(status) ? 'bg-[#e0e3e0] text-[#4d6b62]'
@@ -75,6 +76,8 @@ type FreeDevice = { id: string; assetCode: string; condition: string }
 export function NewRentalForm({ products, customers }: { products: Product[]; customers: Customer[] }) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [customerId, setCustomerId] = useState<string | null>(null)
   const [productId, setProductId] = useState('')
   const [start, setStart] = useState(todayStr())
   const [end, setEnd] = useState(addDaysStr(3))
@@ -108,11 +111,11 @@ export function NewRentalForm({ products, customers }: { products: Product[]; cu
     setBusy(true); setError('')
     const chosen = selected.length ? selected : free.slice(0, quantity).map((d) => d.id)
     const result = await submitAdminBooking({
-      customerName: name.trim(), customerPhone: phone.trim(), productId,
+      customerName: name.trim(), customerPhone: phone.trim(), customerEmail: email.trim() || undefined, productId,
       startsAt: start, endsAt: end, quantity, preferredDeviceIds: chosen,
       channel, notes: `Walk-in created on ${todayStr()}`,
       identityDocumentId: identityDoc.documentId,
-      customerId: identityDoc.customerId,
+      customerId: customerId ?? identityDoc.customerId,
     })
     setBusy(false)
     if (result.ok) {
@@ -134,18 +137,17 @@ export function NewRentalForm({ products, customers }: { products: Product[]; cu
       <div className="mt-6 space-y-4 rounded-2xl border border-[#173b3b]/10 bg-white p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           {/* §19B step 1: create a new customer inline OR pick an existing one.
-              A free-text input (with a searchable datalist of existing customers) lets staff
-              type a brand-new name; the booking service reuses by phone/name or creates on the fly. */}
-          <label className="block text-xs font-bold text-[#173b3b]/60">Customer name
-            <input list="admin-customer-names" value={name} onChange={(e) => setName(e.target.value)}
-              className={inputCls} placeholder="Type a new name or pick an existing customer" required />
-          </label>
-          <datalist id="admin-customer-names">
-            {customers.map((c) => <option key={c.id} value={c.name}>{c.phone ? ` · ${c.phone}` : ''}</option>)}
-          </datalist>
-          <label className="block text-xs font-bold text-[#173b3b]/60">WhatsApp number
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} placeholder="+62 812 ..." />
-          </label>
+              A separate Existing / New customer picker auto-fills the phone + email
+              from the picked record and reuses its exact id (§81 — no duplicate rows). */}
+          <div>
+            <p className="text-xs font-bold text-[#173b3b]/60">Customer</p>
+            <CustomerPicker
+              customers={customers}
+              value={{ customerId, name, phone, email }}
+              onSelect={(v) => { setCustomerId(v.customerId); setName(v.name); setPhone(v.phone); setEmail(v.email) }}
+              inputCls={inputCls}
+            />
+          </div>
         </div>
 
         <label className="block text-xs font-bold text-[#173b3b]/60">Product
@@ -156,7 +158,7 @@ export function NewRentalForm({ products, customers }: { products: Product[]; cu
         </label>
 
         <div className="border-t border-[#173b3b]/10 pt-4">
-          <IdentityDocumentUpload customerName={name} customerPhone={phone} onUploaded={setIdentityDoc} />
+          <IdentityDocumentUpload customerName={name} customerPhone={phone} customerId={customerId} onUploaded={setIdentityDoc} />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
