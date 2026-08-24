@@ -4,6 +4,8 @@ import { getSharedDocument } from '@/lib/services/share'
 import { getInvoiceDetail } from '@/lib/services/invoices'
 import { getActiveTemplateFields } from '@/lib/services/templates'
 import { getAgreementWithDetail } from '@/lib/services/agreements'
+import PaymentInstructions from '@/components/payment-instructions'
+import { resolvePaymentDetails } from '@/lib/services/settings'
 import { formatMoney } from '@/lib/utils/money'
 
 /**
@@ -133,6 +135,8 @@ async function SharedInvoice({ id }: { id: string }) {
           <span>Total due</span><span>{formatMoney(invoice.totalCents)}</span>
         </div>
       </section>
+
+      <PaymentInstructions details={await resolvePaymentDetails(invoice)} />
 
       <footer className="mt-8 border-t border-[#173b3b]/15 pt-4 text-xs leading-5 text-[#173b3b]/55">
         <p>{template.fields.footerNote.trim() || 'Late returns are charged per additional day at the applicable daily rate. The deposit covers late fees, damage, and loss; any remainder is refunded after inspection.'}</p>

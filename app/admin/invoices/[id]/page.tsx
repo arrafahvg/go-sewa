@@ -3,8 +3,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import InvoiceActions from '@/components/admin/invoice-actions'
 import DocumentActions from '@/components/admin/document-actions'
+import InvoicePaymentEditor from '@/components/admin/invoice-payment-editor'
+import PaymentInstructions from '@/components/payment-instructions'
 import { getInvoiceDetail } from '@/lib/services/invoices'
 import { getActiveTemplateFields } from '@/lib/services/templates'
+import { resolvePaymentDetails, getPaymentDetails } from '@/lib/services/settings'
 import { formatMoney } from '@/lib/utils/money'
 
 export const metadata: Metadata = { title: 'Invoice — Go-Sewa Admin' }
@@ -64,6 +67,17 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           <InvoiceActions invoiceId={invoice.id} status={invoice.status} />
         </div>
 
+        <InvoicePaymentEditor
+          invoiceId={invoice.id}
+          configured={await getPaymentDetails()}
+          current={await resolvePaymentDetails(invoice)}
+          hasOverride={
+            invoice.paymentAccounts != null ||
+            invoice.paymentQrisImageUrl != null ||
+            invoice.paymentInstructions != null
+          }
+        />
+
         {/* Printable document — merged from immutable booking snapshots (§58). */}
         <article id="printable-doc" className="mt-6 rounded-2xl border border-[#173b3b]/10 bg-white p-10 print:mt-0 print:rounded-none print:border-0">
           <header className="flex items-start justify-between border-b border-[#173b3b]/15 pb-6">
@@ -120,6 +134,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             totalCents={invoice.totalCents}
             footerNote={template.fields.footerNote.trim()}
           />
+          <PaymentInstructions details={await resolvePaymentDetails(invoice)} />
         </article>
       </div>
     </div>

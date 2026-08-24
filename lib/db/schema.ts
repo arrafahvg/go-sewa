@@ -423,6 +423,11 @@ export const invoices = pgTable('invoices', {
   createdById: text('created_by_id'),
   /** Public read-only share token (/d/[token]) — unguessable, revocable (§31B docs). */
   shareToken: text('share_token').unique(),
+  /** Per-invoice manual-payment overrides (§16): null = fall back to global settings.
+   *  Snapshotted at creation so later settings edits never reinterpret old invoices (§58 spirit). */
+  paymentAccounts: jsonb('payment_accounts'),
+  paymentQrisImageUrl: text('payment_qris_image_url'),
+  paymentInstructions: text('payment_instructions'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
@@ -556,6 +561,11 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   /** Identity document (jaminan) policy — §19, §2528. Types: ktp,sim,passport. */
   identity_document_required: 'true',
   identity_document_types: 'ktp,sim,passport',
+  /** Manual payment details (§16) — rendered on invoices & share links.
+   *  bank_accounts is a JSON array of {bankName, accountNumber, accountHolder}. */
+  payment_bank_accounts: '[]',
+  payment_qris_image_url: '',
+  payment_instructions: '',
 }
 
 // --- Ops / audit ---------------------------------------------------------------

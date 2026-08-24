@@ -5,6 +5,7 @@ import {
   customers, devices, lateFees, damageCharges, invoiceLineItems,
 } from '@/lib/db/schema'
 import { logActivity, uid } from './audit'
+import type { BankAccount } from './settings'
 
 /**
  * Invoice services (spec §35). An invoice is generated from the booking's
@@ -138,6 +139,13 @@ export async function createManualInvoice(input: {
   customerEmail?: string | null
   lines: { description: string; quantity: number; unitPriceCents: number }[]
   dueAt?: Date | null
+  /** Per-invoice payment-details override (§16). Omitted/null fields fall back
+   *  to the global settings at render time. Resolved server-side by the action. */
+  payment?: {
+    accounts: BankAccount[] | null
+    qrisImageUrl: string | null
+    instructions: string | null
+  } | null
   byUserId?: string | null
 }): Promise<{ id: string; number: string }> {
   const cleaned = input.lines
@@ -184,6 +192,9 @@ export async function createManualInvoice(input: {
     totalCents,
     status: 'unpaid',
     dueAt: input.dueAt ?? null,
+    paymentAccounts: input.payment?.accounts ?? null,
+    paymentQrisImageUrl: input.payment?.qrisImageUrl ?? null,
+    paymentInstructions: input.payment?.instructions ?? null,
     createdById: input.byUserId ?? null,
   })
   if (cleaned.length) {
@@ -217,5 +228,39 @@ export async function setInvoiceStatus(
     entity: 'invoice',
     entityId: invoiceId,
     metadata: { number: updated[0].number },
+  })
+}
+
+/**
+ * Set (or clear) the per-invoice manual-payment override (§16). Passing null
+ * clears the override so the invoice falls back to the global settings again.
+ * Works on both manual and booking-generated invoices. Audit-logged (§63).
+ */
+export async function setInvoicePaymentDetails(
+  invoiceId: string,
+  payment: {
+    accounts: BankAccount[] | null
+    qrisImageUrl: string | null
+    instructions: string | null
+  } | null,
+  byUserId?: string | null,
+) {
+  const updated = await db.update(invoices).set({
+    paymentAccounts: payment?.accounts ?? null,
+    paymentQrisImageUrl: payment?.qrisImageUrl ?? null,
+    paymentInstructions: payment?.instructions ?? null,
+  }).where(eq(invoices.id, invoiceId)).returning({ id: invoices.id, number: invoices.number })
+  if (!updated.length) throw new Error('Invoice not found.')
+  await logActivity({
+    userId: byUserId,
+    action: 'invoice_payment_details_updated',
+    entity: 'invoice',
+    entityId: invoiceId,
+    metadata: {
+      number: updated[0].number,
+      overrideCleared: payment === null,
+      accountCount: payment?.accounts?.length ?? 0,
+      includesQris: !!payment?.qrisImageUrl,
+    },
   })
 }

@@ -952,6 +952,17 @@ Do not assume a specific payment gateway unless explicitly configured.
 
 Build the system so payment methods can be added later.
 
+**Implemented (manual transfer / QRIS):** an online payment gateway is deferred.
+Instead, staff configure bank accounts, a managed QRIS image and optional payment
+instructions in settings (§73); these render automatically on invoices and public
+share links so customers can pay by bank transfer or QRIS. Manual (booking-less)
+invoices may override the defaults per invoice — selecting specific bank accounts,
+including/excluding the QRIS image, and writing invoice-specific instructions —
+snapshotted onto the invoice row so settings edits never reinterpret old documents.
+The override is editable (and resettable) per invoice from the admin invoice detail
+page — including booking-generated ones.
+A gateway can later be added as an additional method without changing this flow.
+
 Possible payment methods:
 
 - Bank transfer

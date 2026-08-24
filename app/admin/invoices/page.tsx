@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { listInvoices } from '@/lib/services/invoices'
 import { getCustomers } from '@/lib/data/admin'
+import { getPaymentDetails } from '@/lib/services/settings'
 import { formatMoney } from '@/lib/utils/money'
 import { db } from '@/lib/db'
 import { bookings } from '@/lib/db/schema'
@@ -19,8 +20,11 @@ const STATUS_TONE: Record<string, string> = {
 }
 
 export default async function InvoicesPage() {
-  const rows = await listInvoices()
-  const customers = await getCustomers()
+  const [rows, customers, paymentOptions] = await Promise.all([
+    listInvoices(),
+    getCustomers(),
+    getPaymentDetails(),
+  ])
   const bookingRows = rows.some((r) => r.bookingId)
     ? await db.select({ id: bookings.id, number: bookings.number }).from(bookings)
     : []
@@ -34,7 +38,7 @@ export default async function InvoicesPage() {
         </p>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-serif text-3xl tracking-tight">Invoices</h1>
-          <ManualInvoicePanel customers={customers.map((c) => ({ id: c.id, name: c.name, phone: c.phone, email: c.email }))} />
+          <ManualInvoicePanel customers={customers.map((c) => ({ id: c.id, name: c.name, phone: c.phone, email: c.email }))} paymentOptions={paymentOptions} />
         </div>
 
         <div className="mt-6 overflow-x-auto rounded-2xl border border-[#173b3b]/10 bg-white">

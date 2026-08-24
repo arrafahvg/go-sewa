@@ -88,3 +88,57 @@ export async function removeLogoAction(): Promise<Result> {
     return { ok: false, error: e instanceof Error ? e.message : 'Could not remove the logo.' }
   }
 }
+
+const ALLOWED_QRIS_MIME = ['image/png', 'image/jpeg', 'image/webp']
+const MAX_QRIS_BYTES = 50 * 1024 * 1024 // 50 MB
+
+/**
+ * Managed QRIS image upload (§16). Staff-only. Validates server-side, stores
+ * it publicly via the storage provider and saves the URL to the
+ * `payment_qris_image_url` setting so invoices / share links render it.
+ */
+export async function uploadQrisAction(input: { fileBase64: string; mimeType: string }): Promise<Result & { url?: string }> {
+  const staff = await requireStaff()
+  if (!staff) return { ok: false, error: 'You need staff permissions to upload a QRIS image.' }
+  try {
+    if (!ALLOWED_QRIS_MIME.includes(input.mimeType)) {
+      return { ok: false, error: 'Only PNG, JPG or WebP images are accepted.' }
+    }
+    const bytes = Buffer.from(input.fileBase64, 'base64')
+    if (bytes.length === 0) return { ok: false, error: 'The file is empty.' }
+    if (bytes.length > MAX_QRIS_BYTES) return { ok: false, error: 'The QRIS image must be under 50 MB.' }
+
+    const ext = input.mimeType === 'image/png' ? 'png' : input.mimeType === 'image/jpeg' ? 'jpg' : 'webp'
+    const uploaded = await storageProvider.uploadFile(bytes, {
+      originalName: `qris.${ext}`,
+      mimeType: input.mimeType,
+      folder: 'site',
+    })
+
+    await saveSettings({ payment_qris_image_url: uploaded.url }, staff.id)
+    await logActivity({
+      userId: staff.id, action: 'payment_qris_uploaded', entity: 'settings',
+      entityId: uid(), metadata: { url: uploaded.url, mimeType: input.mimeType },
+    })
+    revalidatePath('/', 'layout')
+    revalidatePath('/admin/settings')
+    return { ok: true, url: uploaded.url }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Could not upload the QRIS image.' }
+  }
+}
+
+/** Clear the stored QRIS image from invoices / share links. */
+export async function removeQrisAction(): Promise<Result> {
+  const staff = await requireStaff()
+  if (!staff) return { ok: false, error: 'You need staff permissions to update settings.' }
+  try {
+    await saveSettings({ payment_qris_image_url: '' }, staff.id)
+    await logActivity({ userId: staff.id, action: 'payment_qris_removed', entity: 'settings', entityId: 'payment_qris_image_url' })
+    revalidatePath('/', 'layout')
+    revalidatePath('/admin/settings')
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Could not remove the QRIS image.' }
+  }
+}

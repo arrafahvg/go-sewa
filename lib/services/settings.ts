@@ -41,6 +41,81 @@ export async function getSettingInt(key: string, fallback: number): Promise<numb
 export const money = (cents: number): string =>
   `Rp ${(cents / 100).toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
 
+/** One manually-configured transfer destination shown on invoices (§16). */
+export type BankAccount = {
+  bankName: string
+  accountNumber: string
+  accountHolder: string
+}
+
+export type PaymentDetails = {
+  accounts: BankAccount[]
+  qrisImageUrl: string
+  instructions: string
+}
+
+/** Parse a stored bank-accounts value (JSON string or already-parsed jsonb). */
+function parseBankAccounts(raw: unknown): BankAccount[] {
+  try {
+    const parsed: unknown = typeof raw === 'string' ? JSON.parse(raw || '[]') : raw
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((a): a is Record<string, unknown> => !!a && typeof a === 'object')
+      .map((a) => ({
+        bankName: String(a.bankName ?? '').trim(),
+        accountNumber: String(a.accountNumber ?? '').trim(),
+        accountHolder: String(a.accountHolder ?? '').trim(),
+      }))
+      .filter((a) => a.bankName || a.accountNumber)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Load staff-configured manual payment details (bank transfer / QRIS).
+ * This replaces an online payment gateway for now (§16): customers pay by
+ * transfer or QRIS using details printed on the invoice/share link. All values
+ * live in settings (§73) — never hardcoded anywhere else.
+ */
+export async function getPaymentDetails(): Promise<PaymentDetails> {
+  const s = await getSettings()
+  return {
+    accounts: parseBankAccounts(s.payment_bank_accounts ?? '[]'),
+    qrisImageUrl: (s.payment_qris_image_url ?? '').trim(),
+    instructions: (s.payment_instructions ?? '').trim(),
+  }
+}
+
+type PaymentOverrideSource = {
+  paymentAccounts?: unknown
+  paymentQrisImageUrl?: string | null
+  paymentInstructions?: string | null
+} | null
+
+/**
+ * Resolve the payment details to print on a specific invoice (§16): per-invoice
+ * overrides where set, falling back field-by-field to the global settings.
+ * Booking-linked invoices have no overrides and simply show the defaults.
+ */
+export async function resolvePaymentDetails(invoice?: PaymentOverrideSource): Promise<PaymentDetails> {
+  const defaults = await getPaymentDetails()
+  if (!invoice) return defaults
+  const overrideAccounts =
+    invoice.paymentAccounts == null ? null : parseBankAccounts(invoice.paymentAccounts)
+  return {
+    accounts: overrideAccounts ?? defaults.accounts,
+    qrisImageUrl:
+      invoice.paymentQrisImageUrl != null
+        ? invoice.paymentQrisImageUrl.trim()
+        : defaults.qrisImageUrl,
+    instructions:
+      invoice.paymentInstructions != null
+        ? invoice.paymentInstructions.trim()
+        : defaults.instructions,
+  }
+}
+
 /** Company profile / content-CMS shape (§42) served to the storefront shell. */
 export type CompanyInfo = {
   businessName: string

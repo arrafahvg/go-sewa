@@ -6,6 +6,7 @@ import { Check, Loader2, Plus, Trash2 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils/money'
 import { createManualInvoiceAction } from '@/app/actions/invoices'
 import CustomerPicker from '@/components/admin/customer-picker'
+import type { PaymentDetails } from '@/lib/services/settings'
 
 type ExistingCustomer = { id: string; name: string; phone: string | null; email?: string | null }
 type Line = { description: string; quantity: number; unitPrice: number }
@@ -14,14 +15,21 @@ type Line = { description: string; quantity: number; unitPrice: number }
  * Staff "New manual invoice" form (spec §35) — create a booking-less invoice with
  * free-form line items, reusing an existing customer or creating one inline. The
  * amount fields take plain Rupiah; the server action converts to minor units.
+ * Payment details (bank accounts / QRIS) can be left on the company defaults or
+ * overridden per invoice; the client only sends selections — the server re-reads
+ * the actual account data from settings (§6).
  */
-export default function ManualInvoiceForm({ customers }: { customers: ExistingCustomer[] }) {
+export default function ManualInvoiceForm({ customers, paymentOptions }: { customers: ExistingCustomer[]; paymentOptions: PaymentDetails }) {
   const [customerId, setCustomerId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [dueAt, setDueAt] = useState('')
   const [lines, setLines] = useState<Line[]>([{ description: '', quantity: 1, unitPrice: 0 }])
+  const [useDefaultPayment, setUseDefaultPayment] = useState(true)
+  const [selectedAccounts, setSelectedAccounts] = useState<number[]>(() => paymentOptions.accounts.map((_, i) => i))
+  const [includeQris, setIncludeQris] = useState(!!paymentOptions.qrisImageUrl)
+  const [instructionsOverride, setInstructionsOverride] = useState(paymentOptions.instructions)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<string | null>(null)
@@ -45,6 +53,11 @@ export default function ManualInvoiceForm({ customers }: { customers: ExistingCu
       customerName: name.trim(), customerPhone: phone.trim() || null, customerEmail: email.trim() || null,
       dueAt: dueAt || null,
       lines: valid.map((l) => ({ description: l.description.trim(), quantity: Number(l.quantity) || 1, unitPrice: Number(l.unitPrice) || 0 })),
+      payment: useDefaultPayment ? null : {
+        accountIndexes: selectedAccounts,
+        includeQris,
+        instructions: instructionsOverride,
+      },
     })
     setBusy(false)
     if (!res.ok) { setError(res.error); return }
@@ -101,6 +114,68 @@ return (
             <p className="text-sm font-bold text-[#173b3b]">Total {formatMoney(Math.round(total * 100))}</p>
           </div>
         </div>
+      </div>
+
+      {/* Payment details override (§16) — defaults come from /admin/settings */}
+      <div className="mt-6 rounded-xl border border-dashed border-[#173b3b]/20 bg-[#faf8f2] p-4">
+        <label className="flex items-center gap-2 text-sm font-bold text-[#173b3b]/70">
+          <input
+            type="checkbox"
+            checked={useDefaultPayment}
+            onChange={(e) => setUseDefaultPayment(e.target.checked)}
+            className="h-4 w-4 accent-[#e76f51]"
+          />
+          Use company payment settings (bank accounts &amp; QRIS)
+        </label>
+
+        {!useDefaultPayment && (
+          <div className="mt-3 space-y-3">
+            {paymentOptions.accounts.length > 0 ? (
+              <div className="space-y-1.5">
+                {paymentOptions.accounts.map((a, i) => (
+                  <label key={i} className="flex items-center gap-2 text-xs font-semibold text-[#173b3b]/70">
+                    <input
+                      type="checkbox"
+                      checked={selectedAccounts.includes(i)}
+                      onChange={(e) =>
+                        setSelectedAccounts((prev) => (e.target.checked ? [...prev, i] : prev.filter((j) => j !== i)))
+                      }
+                      className="h-3.5 w-3.5 accent-[#e76f51]"
+                    />
+                    {a.bankName || 'Bank'} · <span className="font-mono">{a.accountNumber || '—'}</span>
+                    {a.accountHolder && <span className="font-normal text-[#173b3b]/50">({a.accountHolder})</span>}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-[#173b3b]/45">No bank accounts configured — add them at Admin → Settings.</p>
+            )}
+
+            {paymentOptions.qrisImageUrl && (
+              <label className="flex items-center gap-2 text-xs font-semibold text-[#173b3b]/70">
+                <input
+                  type="checkbox"
+                  checked={includeQris}
+                  onChange={(e) => setIncludeQris(e.target.checked)}
+                  className="h-3.5 w-3.5 accent-[#e76f51]"
+                />
+                Include QRIS image
+              </label>
+            )}
+
+            <label className="block text-xs font-bold text-[#173b3b]/60">
+              Payment instructions for this invoice
+              <textarea
+                rows={2}
+                value={instructionsOverride}
+                onChange={(e) => setInstructionsOverride(e.target.value)}
+                placeholder="Optional note printed on this invoice only."
+                className="mt-1 w-full rounded-xl border border-[#173b3b]/12 bg-white px-3 py-2 text-sm font-normal outline-none focus:border-[#e76f51]"
+              />
+              <span className="mt-1 block font-normal text-[#173b3b]/40">Leave empty for no instructions on this invoice.</span>
+            </label>
+          </div>
+        )}
       </div>
 
       {error && <p className="mt-3 text-sm font-bold text-[#a43d2b]">{error}</p>}

@@ -3,11 +3,12 @@
 import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import ManualInvoiceForm from './manual-invoice-form'
+import type { PaymentDetails } from '@/lib/services/settings'
 
 type ExistingCustomer = { id: string; name: string; phone: string | null; email?: string | null }
 
 /** "New manual invoice" toggle on the /admin/invoices list (§35). */
-export default function ManualInvoicePanel({ customers }: { customers: ExistingCustomer[] }) {
+export default function ManualInvoicePanel({ customers, paymentOptions }: { customers: ExistingCustomer[]; paymentOptions: PaymentDetails }) {
   const [open, setOpen] = useState(false)
   return (
     <div>
@@ -16,7 +17,7 @@ export default function ManualInvoicePanel({ customers }: { customers: ExistingC
       </button>
       {open && (
         <div className="mt-5">
-          <ManualInvoiceForm customers={customers} />
+          <ManualInvoiceForm customers={customers} paymentOptions={paymentOptions} />
         </div>
       )}
     </div>
