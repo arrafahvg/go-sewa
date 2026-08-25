@@ -127,13 +127,17 @@ a product's price later never mutates historical rentals.
 
 ## Known limitations / next steps
 
-- **i18n (§9) — partially done**: ID/EN dictionaries (`lib/i18n/`) now drive the
-  storefront shell, home, `/rent` list and `/rent/[slug]` detail with an ID/EN
-  switcher (cookie `go_lang`, falls back to the `default_language` setting).
-  Still pending: checkout flow strings, `/account` pages, and the admin console.
-- **Tests**: Vitest unit suite live (`npm test`) covering money formatting,
-  date/range helpers and the tracking provider contract. Service-level
-  integration tests (bookings/availability against a test DB) are a next step.
+- **i18n (§9)**: ID/EN dictionaries (`lib/i18n/`) drive the full customer-facing
+  surface — storefront shell, home, `/rent` list, `/rent/[slug]`, checkout flow,
+  `/account` and `/account/bookings` (incl. localized booking-status labels) —
+  with an ID/EN switcher in the header. The admin console remains English
+  (staff tool); the account-settings panel is shared with the storefront and
+  therefore localized too.
+- **Tests**: Vitest suite (`npm test`) — 29 unit tests (money, dates/ranges,
+  tracking provider contract) plus a DB integration test for the overdue
+  automation (`tests/integration/overdue.test.ts`) that runs automatically when
+  `TEST_DATABASE_URL` points at a disposable database with the schema applied
+  and is skipped otherwise.
 - **Tracking (§41)**: provider abstraction + schema + admin enrollment UI are
   live; no real provider is connected yet, so every surface honestly reports
   "Tracking integration not configured" and no location data is collected.

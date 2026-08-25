@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import AccountManager from '@/components/account-manager'
 import { getCurrentUser, isStaff } from '@/lib/services/auth'
+import { getDictionary, getLocale } from '@/lib/i18n'
 
 export const metadata: Metadata = {
   title: 'Go-Sewa Admin — Account settings',
@@ -14,6 +15,7 @@ export default async function AdminAccountPage() {
   const current = await getCurrentUser()
   if (!current) redirect('/sign-in')
   if (!isStaff(current.role)) redirect('/admin')
+  const dict = await getDictionary(await getLocale())
 
   return (
     <div className="min-h-screen bg-[#f4f1ea] text-[#173b3b]">
@@ -25,9 +27,9 @@ export default async function AdminAccountPage() {
         <h1 className="mt-2 font-serif text-3xl tracking-tight">Account settings</h1>
         <div className="mt-6 rounded-2xl border border-[#173b3b]/10 bg-white p-6">
           <p className="font-bold">{current.name}</p>
-          <p className="mt-1 text-sm text-[#173b3b]/55">Staff account ({current.role})</p>
+          <p className="mt-1 text-sm text-[#173b3b]/55">{dict.account.staffAccount.replace('{role}', current.role)}</p>
         </div>
-        <AccountManager email={current.email} />
+        <AccountManager email={current.email} dict={dict} />
       </div>
     </div>
   )

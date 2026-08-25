@@ -20,7 +20,7 @@ export default async function CheckoutPage() {
   ])
   return (
     <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale}>
-      <CheckoutFlow addOns={addOns} whatsapp={company.whatsapp} deliveryFeeCents={deliveryFeeCents} />
+      <CheckoutFlow addOns={addOns} whatsapp={company.whatsapp} deliveryFeeCents={deliveryFeeCents} dict={dict} />
     </StorefrontShell>
   )
 }
