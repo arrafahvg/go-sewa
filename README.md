@@ -329,13 +329,25 @@ User-reported items, tracked here until fixed:
    (staff types plain Rupiah → stored ×100 minor units → rendered as `Rp` via
    `formatMoney`). All money remains IDR/Rupiah end-to-end.
 5. **`/rent` intermittently returned "This page couldn't load — a server error
-   occurred"** (e.g. on `/?category=action-cameras`), while the homepage worked.
-   → The catalogue render ran ~1 + 2×N sequential DB queries per product
-   (category + price lookup), which exhausted the Supabase pooler connection
-   budget on cold-started serverless functions. `getCatalogProducts()` now runs
-   exactly three parallel queries (products, categories, daily pricing rules)
-   and resolves joins in memory (§81), keeping `/rent`, `/rent/[slug]` and the
-   homepage fast and pool-safe. The homepage hero "Browse cameras" shortcut was
-   also removed — the single "Browse devices" CTA covers the storefront and the
-   category sections/navbar buttons already deep-link into the catalogue.
+   occurred"** (e.g. on `/?category=action-cameras` + React #441/#419 in the
+   console), while the homepage sometimes worked. **Causes (fixed in layers):**
+   - **Query graph**: the catalogue render ran ~1 + 2×N sequential DB queries per
+     product (category + price lookup), exhausting the pooler / adding latency on
+     serverless cold starts. `getCatalogProducts()` now runs exactly three
+     parallel queries (products, categories, active daily rules) and joins in
+     memory (§81).
+   - **Pool configuration**: `lib/db/index.ts` used `new Pool({ max: 5 })` with no
+     timeouts — a lazy shared pool that could stall indefinitely on a cold start
+     or a dead pooled socket, hanging the server render past Vercel's limit (React
+     #441 "Server Components render error" → #419 "couldn't finish Suspense
+     boundary"). The pool now uses `connectionTimeoutMillis`, `idleTimeoutMillis`,
+     `allowExitOnIdle` and an `error` handler so it fails *fast* instead of
+     hanging, and DB-backed catalog reads go through a bounded one-shot
+     `dbRequest()` retry for transient connection blips.
+   - **Error surface**: added `app/error.tsx` so any residual failure renders a
+     calm, on-brand fallback with "Reload / Browse catalog" actions instead of the
+     raw "Application error" page.
+   The homepage hero "Browse cameras" shortcut was also removed — the single
+   "Browse devices" CTA covers the storefront and the category sections/navbar
+   buttons already deep-link into the catalogue.
 
