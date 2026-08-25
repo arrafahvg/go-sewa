@@ -43,7 +43,9 @@ UPDATE "user" SET role = 'admin' WHERE email = 'colleague@example.com';
 ```
 
 Roles: `owner` (full), `admin`, `staff` (bookings/handover). Staff see an
-"Admin" shortcut chip on the storefront header while signed in; customers never do.
+"Admin" shortcut chip on the storefront header while signed in; customers never
+do. The owner creates additional staff accounts and changes roles in the
+console at **`/admin/settings/users`** (no SQL needed).
 
 ### Overdue automation (§17)
 
@@ -127,6 +129,7 @@ a product's price later never mutates historical rentals.
 | `/admin` | Admin console (overview, bookings, walk-in new rental, customers) |
 | `/admin/invoices`, `/admin/agreements` | Booking-driven + manual invoice/agreement lists |
 | `/admin/settings/account` | Staff account settings (email, password, sessions) |
+| `/admin/settings/users` | Staff account management (owner-only: create accounts, change roles) |
 | `/sign-in` | Staff-only auth (+ first-run owner bootstrap) |
 
 ## Known limitations / next steps
@@ -136,10 +139,15 @@ a product's price later never mutates historical rentals.
   flow — with an ID/EN switcher in the header. The admin console remains English
   (staff tool); the staff account-settings panel is localized too.
 - **Tests**: Vitest suite (`npm test`) — 29 unit tests (money, dates/ranges,
-  tracking provider contract) plus a DB integration test for the overdue
-  automation (`tests/integration/overdue.test.ts`) that runs automatically when
+  tracking provider contract) plus DB integration tests for the overdue
+  automation and the availability engine / booking conflict prevention
+  (`tests/integration/*.test.ts`). Integration tests run automatically when
   `TEST_DATABASE_URL` points at a disposable database with the schema applied
-  and is skipped otherwise.
+  and are skipped otherwise.
+- **SEO basics**: `app/sitemap.ts` emits static routes + every active, indexable
+  product page; `app/robots.ts` allows the storefront and disallows
+  `/admin`, `/api`, `/d` and `/account`. Still open: per-product OG images and
+  a full a11y pass.
 - **Tracking (§41)**: provider abstraction + schema + admin enrollment UI are
   live; no real provider is connected yet, so every surface honestly reports
   "Tracking integration not configured" and no location data is collected.
@@ -182,7 +190,6 @@ a product's price later never mutates historical rentals.
   "cents" → readable Rupiah) across the admin, storefront and public `/d/[token]`
   document views, so a shared invoice always shows the same amount as the admin page.
 - Rental agreement generation is live: booking detail → "Generate agreement",
-- Rental agreement generation is live: booking detail → "Generate agreement",
   printable/signature-ready document at `/admin/agreements/[id]`, merged from
   the active template + booking snapshot.
 - Manual **booking-less rental agreements** (§21/§35) are also live: on
@@ -199,6 +206,12 @@ a product's price later never mutates historical rentals.
 - Deposits & payments (§13, §16): lifecycle is live end-to-end. Services
   (`lib/services/deposits.ts`, `payments.ts`), server actions
   (`app/actions/deposits.ts`, `app/actions/payments.ts`) and the booking-detail
+  panel (`components/admin/deposit-payment-panel.tsx`) record deposit
+  held/returned/forfeited and payments (derived paid status). The per-product
+  `deposit_required` flag (column added in
+  `drizzle/0003_worried_madelyne_pryor.sql` — run `npm run db:push`) is now
+  enforced at checkout: flagged products force an identity document upload.
+  Seed data marks the iPhone 15 Pro as `deposit_required`.
 - **Manual payment details (bank transfer / QRIS)** are live instead of an online
   payment gateway (deferred — an abstraction point for a gateway can be added later).
   Staff configure bank accounts (JSON setting `payment_bank_accounts`), a managed
@@ -217,27 +230,20 @@ a product's price later never mutates historical rentals.
   invoices keep showing the global defaults. The override can also be edited (or
   reset to company settings) at any time from the invoice detail page via the
   "Payment details on this invoice" panel — audit-logged (`invoice_payment_details_updated`).
-  panel (`components/admin/deposit-payment-panel.tsx`) record deposit
-  held/returned/forfeited and payments (derived paid status). The per-product
-  `deposit_required` flag (column added in
-  `drizzle/0003_worried_madelyne_pryor.sql` — run `npm run db:push`) is now
-  enforced at checkout: flagged products force an identity document upload.
-  Seed data marks the iPhone 15 Pro as `deposit_required`.
 - Identity document (KTP/SIM) collateral upload is live: required at online
   checkout and walk-in creation, stored in a private Supabase Storage bucket
   (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ID_DOCS_BUCKET`),
   reviewed via short-lived signed URLs on the admin booking page. Create the
   private bucket once in the Supabase dashboard. Policy is configurable via
-  settings `identity_document_required` and `identity_document_types`.
-  Still pending: staff "verify identity" action wired into the admin customer/
-  booking UI (`verifyIdentityDocument` service exists), and enforcement of
-  `hasValidIdDocument()` at check-out time.
+  settings `identity_document_required` and `identity_document_types`. Staff
+  verify documents from the booking/customer screens; verification is enforced
+  at check-out for deposit-required products (see "Ops gaps closed" below).
 - Storefront search/filter/sort (§10, §44, §45) is live on `/rent`: debounced text
   search across name/description/category/spec values, category chips, daily-price
   bands, a "no deposit" filter and sort (featured/price/name) — all filtering the
   server-loaded catalog in-memory (single fetch, no redundant queries). Gallery +
   specs (§11) are live on `/rent/[slug]` — thumbnail gallery over `products.gallery`
-  and a structured spec table from `products.specs`. Still pending: delivery form (§15).
+  and a structured spec table from `products.specs`.
 - CMS (§42) is live in two admin screens:
   - `/admin/settings` — company profile (business name, **managed logo upload** to
     `/public/uploads/site/` via the storage provider + logo URL fallback, address,
@@ -258,8 +264,7 @@ a product's price later never mutates historical rentals.
   address, recipient name/phone and notes fields, validates them server-side via the
   booking service, applies the configurable `delivery_fee_cents` per booking (shown in
   the price breakdown) and records fulfillment + return method on the booking.
-  Storefront and admin routes ship loading skeletons (§67). Still pending: i18n (§9)
-  and a real scheduler for `/api/cron/overdue`.
+  Storefront and admin routes ship loading skeletons (§67).
 - Admin-reviewed pricing (§15, newly documented in the spec): online orders notify all
   staff in-app via the `notifications` table; while a booking is `pending` /
   `awaiting_confirmation` an **Adjust pricing** panel on `/admin/bookings/[id]` lets
