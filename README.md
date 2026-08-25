@@ -32,14 +32,18 @@ npm run dev
 
 ### Admin access (RBAC, §54)
 
-New sign-ups default to role `customer` and cannot open `/admin`. Promote yourself
-after signing up:
+Customers book **without an account** — sign-in is for staff only. On the very
+first run (no staff user in the database), `/sign-in` offers a one-time
+**owner bootstrap**: create the first owner account there and the offer closes
+automatically. Additional staff accounts are inserted into the `"user"` table
+(role `owner` / `admin` / `staff`) — e.g.:
 
 ```sql
-UPDATE "user" SET role = 'owner' WHERE email = 'you@example.com';
+UPDATE "user" SET role = 'admin' WHERE email = 'colleague@example.com';
 ```
 
-Roles: `owner` (full), `admin`, `staff` (bookings/handover), `customer` (storefront only).
+Roles: `owner` (full), `admin`, `staff` (bookings/handover). Staff see an
+"Admin" shortcut chip on the storefront header while signed in; customers never do.
 
 ### Overdue automation (§17)
 
@@ -123,16 +127,14 @@ a product's price later never mutates historical rentals.
 | `/admin` | Admin console (overview, bookings, walk-in new rental, customers) |
 | `/admin/invoices`, `/admin/agreements` | Booking-driven + manual invoice/agreement lists |
 | `/admin/settings/account` | Staff account settings (email, password, sessions) |
-| `/sign-in`, `/sign-up` | Auth |
+| `/sign-in` | Staff-only auth (+ first-run owner bootstrap) |
 
 ## Known limitations / next steps
 
 - **i18n (§9)**: ID/EN dictionaries (`lib/i18n/`) drive the full customer-facing
-  surface — storefront shell, home, `/rent` list, `/rent/[slug]`, checkout flow,
-  `/account` and `/account/bookings` (incl. localized booking-status labels) —
-  with an ID/EN switcher in the header. The admin console remains English
-  (staff tool); the account-settings panel is shared with the storefront and
-  therefore localized too.
+  surface — storefront shell, home, `/rent` list, `/rent/[slug]` and the checkout
+  flow — with an ID/EN switcher in the header. The admin console remains English
+  (staff tool); the staff account-settings panel is localized too.
 - **Tests**: Vitest suite (`npm test`) — 29 unit tests (money, dates/ranges,
   tracking provider contract) plus a DB integration test for the overdue
   automation (`tests/integration/overdue.test.ts`) that runs automatically when
@@ -148,12 +150,16 @@ a product's price later never mutates historical rentals.
   (`ENABLE_INTERNAL_CRON=1`, 15-min interval via `instrumentation.ts`), and an
   opportunistic sweep on admin dashboard load. Staff receive notifications when
   rentals flip to overdue.
-- Account management lives in the admin console at `/admin/settings/account`
-  (change email, change password, session management); the storefront header no
-  longer exposes a public "My account" entry point (the `/account` routes remain
-  functional for signed-in customers who navigate directly). "My bookings" is live at `/account/bookings`: online checkouts link
-  the booking's customer record to the signed-in account (`customers.user_id`),
-  and existing customers are auto-linked by exact email match on first visit.
+- Account management lives only in the admin console at `/admin/settings/account`
+  (change email, change password, session management) — staff-only. Customers do
+  not log in: booking is fully account-less (name + WhatsApp + ID document at
+  checkout), so `/account/*` and public sign-up were removed. The legacy
+  `customers.user_id` link column remains in the schema but is unused.
+- Document templates (`/admin/templates`) are kind-aware: the agreement editor
+  offers title/intro/terms/footer/signature; the invoice editor exposes only the
+  intro line and footer note — because invoices render from a fixed structured
+  layout fed by immutable booking snapshots (§58). The invoice preview mirrors
+  the real document instead of showing agreement content.
 - Admin CRM/CRM screens are live at `/admin/customers` (customer profiles + their
   rental history) and `/admin/leads` (create, filter by status, convert to a
   customer). Every customer in the list opens a detail page at

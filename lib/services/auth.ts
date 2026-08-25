@@ -1,12 +1,31 @@
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { user } from '@/lib/db/schema'
 
 export type Role = 'owner' | 'admin' | 'staff' | 'customer'
 
 const STAFF_ROLES: Role[] = ['owner', 'admin', 'staff']
+
+/**
+ * Number of staff users (§54). Used by the first-run owner bootstrap on the
+ * sign-in screen — once any staff account exists, sign-up stays closed.
+ */
+export async function countStaffUsers(): Promise<number> {
+  try {
+    const rows = await db.select({ id: user.id }).from(user).where(inArray(user.role, STAFF_ROLES))
+    return rows.length
+  } catch {
+    return 0
+  }
+}
+
+/** True when no staff account exists yet — the console has never been set up. */
+export async function needsOwnerBootstrap(): Promise<boolean> {
+  return (await countStaffUsers()) === 0
+}
+
 
 /** Current session user with role, or null when signed out. */
 export async function getCurrentUser(): Promise<{ id: string; name: string; email: string; role: Role } | null> {

@@ -1,4 +1,5 @@
 import StorefrontShell from '@/components/storefront/storefront-shell'
+import StaffAdminLink from '@/components/storefront/staff-admin-link'
 import CheckoutFlow from '@/components/storefront/checkout-flow'
 import { getAddOns } from '@/lib/data/catalog'
 import { getCompanyInfo, getSettingInt } from '@/lib/services/settings'
@@ -19,7 +20,7 @@ export default async function CheckoutPage() {
     getLocale(), getDictionary(),
   ])
   return (
-    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale}>
+    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale} adminSlot={<StaffAdminLink />}>
       <CheckoutFlow addOns={addOns} whatsapp={company.whatsapp} deliveryFeeCents={deliveryFeeCents} dict={dict} />
     </StorefrontShell>
   )

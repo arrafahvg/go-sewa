@@ -1,4 +1,5 @@
 import StorefrontShell from '@/components/storefront/storefront-shell'
+import StaffAdminLink from '@/components/storefront/staff-admin-link'
 import FaqAccordion from '@/components/storefront/faq-accordion'
 import ProductCard from '@/components/storefront/product-card'
 import { Star } from 'lucide-react'
@@ -31,7 +32,7 @@ export default async function Home() {
   const visibleTestimonials = testimonials.filter((t) => t.active).slice(0, 6)
 
   return (
-    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale}>
+    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale} adminSlot={<StaffAdminLink />}>
       <section className="mx-auto max-w-7xl px-5 pb-20 pt-14 lg:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="max-w-3xl">

@@ -40,6 +40,19 @@ const DEFAULT_FIELDS: TemplateFields = {
   signatureBlock: true,
 }
 
+/**
+ * Invoice templates only consume introLine + footerNote at render time — the
+ * invoice document itself is structured code (§58 snapshots). Terms/signature
+ * are therefore never offered or stored for invoices (§21B).
+ */
+const INVOICE_DEFAULT_FIELDS: TemplateFields = {
+  headerTitle: 'Invoice',
+  introLine: '',
+  terms: '',
+  footerNote: '',
+  signatureBlock: false,
+}
+
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
@@ -65,14 +78,27 @@ export function renderBody(fields: TemplateFields): string {
   return parts.join('\n')
 }
 
-function parseFields(json: Record<string, string> | null | undefined): TemplateFields {
+function parseFields(json: Record<string, string> | null | undefined, kind: TemplateKind): TemplateFields {
+  const defaults = kind === 'invoice' ? INVOICE_DEFAULT_FIELDS : DEFAULT_FIELDS
   return {
-    headerTitle: json?.headerTitle ?? DEFAULT_FIELDS.headerTitle,
-    introLine: json?.introLine ?? DEFAULT_FIELDS.introLine,
-    terms: json?.terms ?? DEFAULT_FIELDS.terms,
-    footerNote: json?.footerNote ?? DEFAULT_FIELDS.footerNote,
-    signatureBlock: json?.signatureBlock !== 'false',
+    headerTitle: json?.headerTitle ?? defaults.headerTitle,
+    introLine: json?.introLine ?? defaults.introLine,
+    terms: json?.terms ?? defaults.terms,
+    footerNote: json?.footerNote ?? defaults.footerNote,
+    signatureBlock: kind === 'invoice' ? false : json?.signatureBlock !== 'false',
   }
+}
+
+/** Render structured fields into the invoice template body (informational). */
+export function renderInvoiceBody(fields: TemplateFields): string {
+  const parts = ['<h1 style="font-family:serif">INVOICE</h1>']
+  if (fields.introLine.trim()) parts.push(`<p>${esc(fields.introLine)}</p>`)
+  parts.push('<p>Invoice <strong>{{invoice_number}}</strong>{{booking_number_line}}</p>')
+  parts.push('<h3>Customer</h3>\n<p>{{customer_name}} · {{customer_phone}}{{customer_email_line}}</p>')
+  parts.push('<h3>Items</h3>\n{{items_table}}')
+  parts.push('<p><strong>Total due:</strong> {{total_due}}</p>')
+  if (fields.footerNote.trim()) parts.push(`<p style="margin-top:24px">${esc(fields.footerNote)}</p>`)
+  return parts.join('\n')
 }
 
 /** Load the editable fields + metadata of the active template for a kind. */
@@ -81,14 +107,14 @@ export async function getActiveTemplateFields(kind: TemplateKind) {
     const row = (await db.select().from(agreementTemplates).where(eq(agreementTemplates.active, true)).limit(1))[0]
       ?? (await db.select().from(agreementTemplates).limit(1))[0]
     return row
-      ? { exists: true as const, name: row.name, version: row.version, fields: parseFields(row.settingsJson) }
+      ? { exists: true as const, name: row.name, version: row.version, fields: parseFields(row.settingsJson, kind) }
       : { exists: false as const, name: 'Default', version: 1, fields: DEFAULT_FIELDS }
   }
   const row = (await db.select().from(invoiceTemplates).where(eq(invoiceTemplates.active, true)).limit(1))[0]
     ?? (await db.select().from(invoiceTemplates).limit(1))[0]
   return row
-    ? { exists: true as const, name: row.name, version: row.version ?? 1, fields: parseFields(row.settingsJson) }
-    : { exists: false as const, name: 'Default', version: 1, fields: { ...DEFAULT_FIELDS, headerTitle: 'Invoice' } }
+    ? { exists: true as const, name: row.name, version: row.version ?? 1, fields: parseFields(row.settingsJson, kind) }
+    : { exists: false as const, name: 'Default', version: 1, fields: INVOICE_DEFAULT_FIELDS }
 }
 
 /** Save structured template fields; bumps version, creates the row if missing. */
@@ -97,15 +123,22 @@ export async function saveTemplate(
   fields: TemplateFields,
   byUserId: string | null,
 ): Promise<{ version: number }> {
-  const bodyHtml = renderBody(fields)
+  // Invoices only consume intro/footer — normalize the rest so stored state
+  // matches what rendering actually uses (§21B, no misleading data §80).
+  const normalized: TemplateFields = kind === 'invoice'
+    ? { ...fields, headerTitle: 'Invoice', terms: '', signatureBlock: false }
+    : fields
+  const bodyHtml = kind === 'invoice' ? renderInvoiceBody(normalized) : renderBody(normalized)
   const settingsJson = {
-    headerTitle: fields.headerTitle,
-    introLine: fields.introLine,
-    terms: fields.terms,
-    footerNote: fields.footerNote,
-    signatureBlock: String(fields.signatureBlock),
+    headerTitle: normalized.headerTitle,
+    introLine: normalized.introLine,
+    terms: normalized.terms,
+    footerNote: normalized.footerNote,
+    signatureBlock: String(normalized.signatureBlock),
   }
-  const name = fields.headerTitle.trim() || (kind === 'agreement' ? 'Rental Agreement' : 'Invoice')
+  const name = kind === 'invoice'
+    ? 'Invoice'
+    : normalized.headerTitle.trim() || 'Rental Agreement'
 
   let version: number
   if (kind === 'agreement') {

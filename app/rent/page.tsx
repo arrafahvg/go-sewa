@@ -1,5 +1,6 @@
 import { getCategories, getCatalogProducts } from '@/lib/data/catalog'
 import StorefrontShell from '@/components/storefront/storefront-shell'
+import StaffAdminLink from '@/components/storefront/staff-admin-link'
 import RentExplorer from '@/components/storefront/rent-explorer'
 import { getCompanyInfo } from '@/lib/services/settings'
 import { getDictionary, getLocale, pick } from '@/lib/i18n'
@@ -21,7 +22,7 @@ export default async function RentPage({
   ])
 
   return (
-    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale}>
+    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale} adminSlot={<StaffAdminLink />}>
       <div className="mx-auto max-w-7xl px-5 pb-24 pt-10 lg:px-8">
         <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{dict.rentPage.kicker}</p>
         <h1 className="mt-3 font-serif text-4xl tracking-tight sm:text-5xl">

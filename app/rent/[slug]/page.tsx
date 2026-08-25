@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getProductBySlug, getAddOns } from '@/lib/data/catalog'
 import StorefrontShell from '@/components/storefront/storefront-shell'
+import StaffAdminLink from '@/components/storefront/staff-admin-link'
 import ProductDetail from '@/components/storefront/product-detail'
 import { getCompanyInfo } from '@/lib/services/settings'
 
@@ -24,7 +25,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const addOns = await getAddOns()
 
   return (
-    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale}>
+    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale} adminSlot={<StaffAdminLink />}>
       <ProductDetail product={product} addOns={addOns} whatsapp={company.whatsapp} dict={dict} />
     </StorefrontShell>
   )

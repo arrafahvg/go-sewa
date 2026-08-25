@@ -21,6 +21,7 @@ export default function StorefrontShell({
   company,
   dict,
   locale,
+  adminSlot,
 }: {
   children: React.ReactNode
   whatsapp?: string
@@ -34,6 +35,8 @@ export default function StorefrontShell({
   }
   dict: Dictionary
   locale: Locale
+  /** Optional server-rendered slot next to the cart (e.g. staff Admin chip). */
+  adminSlot?: React.ReactNode
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [count, setCount] = useState(0)
@@ -74,6 +77,7 @@ export default function StorefrontShell({
             ))}
           </nav>
           <div className="flex items-center gap-3">
+            {adminSlot}
             <LanguageSwitcher locale={locale} />
             <Link
               href="/checkout"

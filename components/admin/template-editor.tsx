@@ -70,43 +70,68 @@ export default function TemplateEditor({
       </div>
 
       <div className="mt-5 grid gap-6 lg:grid-cols-2">
-        {/* Editor */}
+        {/* Editor — invoices only consume intro/footer, so only those are offered */}
         <div className="space-y-3">
-          <label className="block text-xs font-bold text-[#173b3b]/70">Document title
-            <input className={`mt-1 ${field}`} value={fields.headerTitle} onChange={(e) => set({ headerTitle: e.target.value })} placeholder="Rental Agreement" />
-          </label>
+          {kind === 'agreement' && (
+            <label className="block text-xs font-bold text-[#173b3b]/70">Document title
+              <input className={`mt-1 ${field}`} value={fields.headerTitle} onChange={(e) => set({ headerTitle: e.target.value })} placeholder="Rental Agreement" />
+            </label>
+          )}
           <label className="block text-xs font-bold text-[#173b3b]/70">Intro line (optional)
             <input className={`mt-1 ${field}`} value={fields.introLine} onChange={(e) => set({ introLine: e.target.value })} placeholder="e.g. Thank you for choosing Go-Sewa." />
           </label>
-          <label className="block text-xs font-bold text-[#173b3b]/70">Terms — one per line
-            <textarea rows={7} className={`mt-1 ${field}`} value={fields.terms} onChange={(e) => set({ terms: e.target.value })} />
-          </label>
+          {kind === 'agreement' && (
+            <>
+              <label className="block text-xs font-bold text-[#173b3b]/70">Terms — one per line
+                <textarea rows={7} className={`mt-1 ${field}`} value={fields.terms} onChange={(e) => set({ terms: e.target.value })} />
+              </label>
+              <label className="flex items-center gap-2 text-xs font-bold text-[#173b3b]/70">
+                <input type="checkbox" checked={fields.signatureBlock} onChange={(e) => set({ signatureBlock: e.target.checked })} />
+                Include customer signature line
+              </label>
+            </>
+          )}
           <label className="block text-xs font-bold text-[#173b3b]/70">Footer note (optional)
             <input className={`mt-1 ${field}`} value={fields.footerNote} onChange={(e) => set({ footerNote: e.target.value })} />
           </label>
-          <label className="flex items-center gap-2 text-xs font-bold text-[#173b3b]/70">
-            <input type="checkbox" checked={fields.signatureBlock} onChange={(e) => set({ signatureBlock: e.target.checked })} />
-            Include customer signature line
-          </label>
+          {kind === 'invoice' && (
+            <p className="rounded-xl bg-[#f0ecd0] px-3 py-2 text-xs font-semibold text-[#7a6a2a]">
+              Invoices use a fixed structured layout (items, totals and snapshots come from the booking). Only the intro line and footer note are customizable.
+            </p>
+          )}
         </div>
 
-        {/* Live preview */}
+        {/* Live preview — mirrors what the printed document actually looks like */}
         <div className="rounded-xl border border-[#173b3b]/10 bg-[#f7f5ef] p-5 text-sm">
           <p className="text-[11px] font-bold uppercase tracking-wide text-[#173b3b]/40">Preview</p>
-          <h3 className="mt-2 font-serif text-xl font-bold">{fields.headerTitle || '(no title)'}</h3>
-          {fields.introLine.trim() && <p className="mt-1 text-xs">{fields.introLine}</p>}
-          <p className="mt-2 text-xs text-[#173b3b]/50">Agreement # · Rental # · Issued …</p>
-          <p className="mt-2 text-xs"><strong>Customer</strong> · dates · items table · deposit</p>
-          {termsList.length > 0 && (
+          {kind === 'invoice' ? (
             <>
-              <p className="mt-3 font-bold">Terms</p>
-              <ol className="ml-4 list-decimal space-y-1 text-xs">
-                {termsList.map((t, i) => <li key={i}>{t}</li>)}
-              </ol>
+              <h3 className="mt-2 font-serif text-xl font-bold">INVOICE</h3>
+              <p className="mt-1 font-mono text-[11px]">{initial.exists ? 'INV-…' : 'Invoice #'}</p>
+              {fields.introLine.trim() && <p className="mt-2 text-xs italic">{fields.introLine}</p>}
+              <p className="mt-2 text-xs text-[#173b3b]/50">Billed to · Rental period · items table · totals</p>
+              <div className="mt-3 flex justify-between border-t border-[#173b3b]/15 pt-2 text-xs font-bold"><span>Total due</span><span>—</span></div>
+              {fields.footerNote.trim() && <p className="mt-3 text-xs">{fields.footerNote}</p>}
+              <p className="mt-3 text-[11px] italic text-[#173b3b]/45">Payment details (bank accounts / QRIS) render here automatically from Settings.</p>
+            </>
+          ) : (
+            <>
+              <h3 className="mt-2 font-serif text-xl font-bold">{fields.headerTitle || '(no title)'}</h3>
+              {fields.introLine.trim() && <p className="mt-1 text-xs">{fields.introLine}</p>}
+              <p className="mt-2 text-xs text-[#173b3b]/50">Agreement # · Rental # · Issued …</p>
+              <p className="mt-2 text-xs"><strong>Customer</strong> · dates · items table · deposit</p>
+              {termsList.length > 0 && (
+                <>
+                  <p className="mt-3 font-bold">Terms</p>
+                  <ol className="ml-4 list-decimal space-y-1 text-xs">
+                    {termsList.map((t, i) => <li key={i}>{t}</li>)}
+                  </ol>
+                </>
+              )}
+              {fields.footerNote.trim() && <p className="mt-3 text-xs">{fields.footerNote}</p>}
+              {fields.signatureBlock && <p className="mt-4 text-xs">Customer signature: ____________ Date: ________</p>}
             </>
           )}
-          {fields.footerNote.trim() && <p className="mt-3 text-xs">{fields.footerNote}</p>}
-          {fields.signatureBlock && <p className="mt-4 text-xs">Customer signature: ____________ Date: ________</p>}
         </div>
       </div>
 

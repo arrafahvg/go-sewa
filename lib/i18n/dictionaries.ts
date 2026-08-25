@@ -168,18 +168,6 @@ const en = {
     revokeSession: 'Revoke',
     noSessions: 'No active sessions found.',
   },
-  bookings: {
-    breadcrumbHome: 'Home',
-    breadcrumbAccount: 'My account',
-    title: 'My bookings',
-    noBookingsYet: 'No bookings yet',
-    noBookingsBody: 'Bookings you make online will appear here. If you booked before creating an account, use the same email at checkout to link your rentals.',
-    browseGear: 'Browse gear',
-    rentalTotal: 'Rental total',
-    depositNote: 'Deposit (separate, refundable): {amount}',
-    delivery: 'Delivery',
-    pickup: 'Pickup',
-  },
 }
 
 export type Dictionary = typeof en
@@ -344,18 +332,6 @@ const id: Dictionary = {
     expiresOn: 'kedaluwarsa {date}',
     revokeSession: 'Cabut',
     noSessions: 'Tidak ada sesi aktif.',
-  },
-  bookings: {
-    breadcrumbHome: 'Beranda',
-    breadcrumbAccount: 'Akun saya',
-    title: 'Booking saya',
-    noBookingsYet: 'Belum ada booking',
-    noBookingsBody: 'Booking online yang kamu buat akan muncul di sini. Jika kamu pernah booking sebelum membuat akun, gunakan email yang sama saat checkout untuk menautkan penyewaanmu.',
-    browseGear: 'Lihat perlengkapan',
-    rentalTotal: 'Total sewa',
-    depositNote: 'Jaminan (terpisah, dikembalikan): {amount}',
-    delivery: 'Diantar',
-    pickup: 'Ambil sendiri',
   },
 }
 
