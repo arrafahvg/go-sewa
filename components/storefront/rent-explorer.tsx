@@ -5,10 +5,13 @@ import type { Dispatch, SetStateAction } from 'react'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import ProductCard from '@/components/storefront/product-card'
 import { formatMoneyCompact } from '@/lib/utils/money'
-import type { CatalogProduct, CatalogCategory } from '@/lib/data/catalog'
+import type { CatalogProduct } from '@/lib/data/catalog'
 import type { Dictionary } from '@/lib/i18n/dictionaries'
 
 type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name'
+
+/** Filter chip option — `name` is already localized server-side (§9). */
+type CategoryOption = { slug: string; name: string }
 
 /** Price-band quick filters in Rp (daily rate). Labels come from the dictionary (§9). */
 const PRICE_BANDS: { key: string; min?: number; max?: number }[] = [
@@ -46,16 +49,13 @@ export default function RentExplorer({
   initialCategory = '',
   initialSort = 'featured',
   dict,
-  categoryName,
 }: {
   products: CatalogProduct[]
-  categories: CatalogCategory[]
+  categories: CategoryOption[]
   initialCategory?: string
   initialSort?: string
   /** Localized UI strings (§9) — passed from the server page. */
   dict: Dictionary
-  /** Localized category name resolver for filter chips. */
-  categoryName: (c: CatalogCategory) => string
 }) {
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
@@ -121,7 +121,7 @@ function RentExplorerView(props: {
   q: string; setQ: Dispatch<SetStateAction<string>>
   sort: SortKey; setSort: Dispatch<SetStateAction<SortKey>>
   category: string; setCategory: Dispatch<SetStateAction<string>>
-  categories: CatalogCategory[]
+  categories: CategoryOption[]
   priceKey: string; setPriceKey: Dispatch<SetStateAction<string>>
   depositFree: boolean; setDepositFree: Dispatch<SetStateAction<boolean>>
   results: CatalogProduct[]
@@ -160,7 +160,7 @@ function RentExplorerView(props: {
         category={category} setCategory={setCategory} categories={categories}
         priceKey={priceKey} setPriceKey={setPriceKey}
         depositFree={depositFree} setDepositFree={setDepositFree}
-        dict={dict} categoryName={categoryName}
+        dict={dict}
       />
 
       <p className="mt-4 text-xs text-[#173b3b]/55">
@@ -194,20 +194,19 @@ function RentExplorerView(props: {
   )
 }
 
-function FiltersRow({ category, setCategory, categories, priceKey, setPriceKey, depositFree, setDepositFree, dict, categoryName }: {
+function FiltersRow({ category, setCategory, categories, priceKey, setPriceKey, depositFree, setDepositFree, dict }: {
   category: string; setCategory: Dispatch<SetStateAction<string>>
-  categories: CatalogCategory[]
+  categories: CategoryOption[]
   priceKey: string; setPriceKey: Dispatch<SetStateAction<string>>
   depositFree: boolean; setDepositFree: Dispatch<SetStateAction<boolean>>
   dict: Dictionary
-  categoryName: (c: CatalogCategory) => string
 }) {
   return (
     <>
       <div className="mt-5 flex flex-wrap gap-2">
         <button onClick={() => setCategory('')} className={`rounded-full px-4 py-2 text-xs font-bold transition ${category === '' ? 'bg-[#173b3b] text-white' : 'border border-[#173b3b]/15 bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>{dict.rent.allCategories}</button>
         {categories.map((c) => (
-          <button key={c.slug} onClick={() => setCategory(category === c.slug ? '' : c.slug)} className={`rounded-full px-4 py-2 text-xs font-bold transition ${category === c.slug ? 'bg-[#173b3b] text-white' : 'border border-[#173b3b]/15 bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>{categoryName(c)}</button>
+          <button key={c.slug} onClick={() => setCategory(category === c.slug ? '' : c.slug)} className={`rounded-full px-4 py-2 text-xs font-bold transition ${category === c.slug ? 'bg-[#173b3b] text-white' : 'border border-[#173b3b]/15 bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>{c.name}</button>
         ))}
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2">

@@ -330,17 +330,20 @@ User-reported items, tracked here until fixed:
    `formatMoney`). All money remains IDR/Rupiah end-to-end.
 5. **`/rent` intermittently returned "This page couldn't load — a server error
    occurred"** (e.g. on `/?category=action-cameras` + React #441/#419 in the
-   console), while the homepage sometimes worked. **Causes (fixed in layers):**
-   - **Query graph**: the catalogue render ran ~1 + 2×N sequential DB queries per
-     product (category + price lookup), exhausting the pooler / adding latency on
-     serverless cold starts. `getCatalogProducts()` now runs exactly three
-     parallel queries (products, categories, active daily rules) and joins in
+   console), while the homepage worked. **Root cause + hardening (all landed):**
+   - **Root cause (React #441)**: `app/rent/page.tsx` passed a **closure function**
+     (`categoryName`) into the client component `RentExplorer`. Functions can't be
+     serialized across the Server→Client component boundary unless they're
+     `"use server"` actions, so Turbopack threw *"Functions cannot be passed
+     directly to Client Components"* during the server render → #441 → #419.
+     **Fixed**: the localized category name is now resolved server-side and passed
+     as a plain `{ slug, name }` array; the function prop was removed.
+   - **Query graph**: the catalogue render also ran ~1 + 2×N sequential DB queries
+     per product (category + price lookup). `getCatalogProducts()` now runs exactly
+     three parallel queries (products, categories, active daily rules) and joins in
      memory (§81).
    - **Pool configuration**: `lib/db/index.ts` used `new Pool({ max: 5 })` with no
-     timeouts — a lazy shared pool that could stall indefinitely on a cold start
-     or a dead pooled socket, hanging the server render past Vercel's limit (React
-     #441 "Server Components render error" → #419 "couldn't finish Suspense
-     boundary"). The pool now uses `connectionTimeoutMillis`, `idleTimeoutMillis`,
+     timeouts. It now uses `connectionTimeoutMillis`, `idleTimeoutMillis`,
      `allowExitOnIdle` and an `error` handler so it fails *fast* instead of
      hanging, and DB-backed catalog reads go through a bounded one-shot
      `dbRequest()` retry for transient connection blips.

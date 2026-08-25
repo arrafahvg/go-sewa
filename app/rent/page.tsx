@@ -34,10 +34,12 @@ export default async function RentPage({
 
         <RentExplorer
           products={products}
-          categories={categories}
+          categories={categories.map((c) => ({
+            slug: c.slug,
+            name: pick(locale, c.nameEn, c.nameId ?? c.nameEn),
+          }))}
           initialCategory={category ?? ''}
           dict={dict}
-          categoryName={(c) => pick(locale, c.nameEn, (c as unknown as { nameId?: string }).nameId ?? c.nameEn)}
         />
       </div>
     </StorefrontShell>
