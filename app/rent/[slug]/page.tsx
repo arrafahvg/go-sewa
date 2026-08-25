@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getProductBySlug, getAddOns } from '@/lib/data/catalog'
+import { getProductBySlug, getAddOns, getNavCategories } from '@/lib/data/catalog'
 import StorefrontShell from '@/components/storefront/storefront-shell'
 import StaffAdminLink from '@/components/storefront/staff-admin-link'
 import ProductDetail from '@/components/storefront/product-detail'
@@ -19,13 +19,13 @@ export const dynamic = 'force-dynamic'
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const [product, company, locale, dict] = await Promise.all([getProductBySlug(slug), getCompanyInfo(), getLocale(), getDictionary()])
+  const [product, company, locale, dict, navCats] = await Promise.all([getProductBySlug(slug), getCompanyInfo(), getLocale(), getDictionary(), getNavCategories()])
   if (!product) notFound()
 
   const addOns = await getAddOns()
 
   return (
-    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale} adminSlot={<StaffAdminLink />}>
+    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale} adminSlot={<StaffAdminLink />} navCategories={navCats}>
       <ProductDetail product={product} addOns={addOns} whatsapp={company.whatsapp} dict={dict} />
     </StorefrontShell>
   )

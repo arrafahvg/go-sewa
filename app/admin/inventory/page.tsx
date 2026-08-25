@@ -1,6 +1,9 @@
 import { db } from '@/lib/db'
-import { deviceTrackingConfigurations, deviceTrackingEvents } from '@/lib/db/schema'
+import {
+  deviceTrackingConfigurations, deviceTrackingEvents,
+} from '@/lib/db/schema'
 import { isTrackingConfigured } from '@/lib/services/tracking'
+import { listCategoriesAdmin } from '@/lib/services/inventory'
 import type { Metadata } from 'next'
 import InventoryManager from '@/components/admin/inventory'
 import type { AdminProductView, AdminPricingRule } from '@/components/admin/inventory'
@@ -24,12 +27,15 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function InventoryPage() {
-  const [productRows, ruleRows, devices, trackingProviderConnected] = await Promise.all([
+  const [productRows, ruleRows, devices, trackingProviderConnected, categoryRows] = await Promise.all([
     listProducts(),
     listPricingRules(),
     getAdminDevices(),
     isTrackingConfigured(),
+    listCategoriesAdmin(),
   ])
+
+  const categories = categoryRows.map((c) => ({ id: c.id, slug: c.slug, nameId: c.nameId, nameEn: c.nameEn }))
 
   const configs = await db.select().from(deviceTrackingConfigurations)
   const events = await db.select().from(deviceTrackingEvents)
@@ -51,6 +57,7 @@ export default async function InventoryPage() {
     name: p.name,
     slug: p.slug,
     description: p.description,
+    categoryId: p.categoryId,
     depositCents: p.depositCents,
     depositRequired: p.depositRequired,
     active: p.active,
@@ -74,7 +81,7 @@ export default async function InventoryPage() {
         <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">
           <a href="/admin" className="hover:underline">Admin</a> / Inventory
         </p>
-        <InventoryManager products={products} rules={rules} devices={devices} trackingProviderConnected={trackingProviderConnected} tracking={tracking} />
+        <InventoryManager products={products} rules={rules} devices={devices} trackingProviderConnected={trackingProviderConnected} tracking={tracking} categories={categories} />
       </div>
     </div>
   )

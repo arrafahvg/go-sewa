@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import dictionaries, { LOCALE_COOKIE, type Dictionary, type Locale } from '@/lib/i18n/dictionaries'
+import dictionaries, { LOCALE_COOKIE, pick, type Dictionary, type Locale } from '@/lib/i18n/dictionaries'
 import { getSetting } from '@/lib/services/settings'
 
 /**
@@ -28,8 +28,6 @@ export async function getDictionary(locale?: Locale): Promise<Dictionary> {
   return dictionaries[locale ?? await getLocale()]
 }
 
-/** Pick between the two localized fields stored on catalog/content rows. */
-export function pick<T>(locale: Locale, enValue: T, idValue: T): T {
-  return locale === 'id' ? idValue : enValue
-}
+/** Re-exported for server components; the implementation lives in dictionaries (client-safe). */
+export { pick }
 

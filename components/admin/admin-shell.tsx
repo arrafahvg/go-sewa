@@ -66,7 +66,13 @@ type Group = { label: string; items: Item[] }
 const TOP_ITEMS: Item[] = [{ label: 'Overview', href: '/admin', icon: LayoutDashboard }]
 
 const GROUPS: Group[] = [
-  { label: 'Catalog', items: [{ label: 'Inventory', href: '/admin/inventory', icon: Package }] },
+  {
+    label: 'Catalog',
+    items: [
+      { label: 'Inventory', href: '/admin/inventory', icon: Package },
+      { label: 'Categories', href: '/admin/content/categories', icon: FileText },
+    ],
+  },
   {
     label: 'Customers',
     items: [

@@ -1,4 +1,4 @@
-import { getCategories, getCatalogProducts } from '@/lib/data/catalog'
+import { getCategories, getCatalogProducts, getNavCategories } from '@/lib/data/catalog'
 import StorefrontShell from '@/components/storefront/storefront-shell'
 import StaffAdminLink from '@/components/storefront/staff-admin-link'
 import RentExplorer from '@/components/storefront/rent-explorer'
@@ -17,12 +17,12 @@ export default async function RentPage({
 }: {
   searchParams: Promise<{ category?: string; sort?: string }>
 }) {
-  const [{ category }, categories, products, company, locale, dict] = await Promise.all([
-    searchParams, getCategories(), getCatalogProducts(), getCompanyInfo(), getLocale(), getDictionary(),
+  const [{ category }, categories, products, company, locale, dict, navCats] = await Promise.all([
+    searchParams, getCategories(), getCatalogProducts(), getCompanyInfo(), getLocale(), getDictionary(), getNavCategories(),
   ])
 
   return (
-    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale} adminSlot={<StaffAdminLink />}>
+    <StorefrontShell whatsapp={company.whatsapp} company={company} dict={dict} locale={locale} adminSlot={<StaffAdminLink />} navCategories={navCats}>
       <div className="mx-auto max-w-7xl px-5 pb-24 pt-10 lg:px-8">
         <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{dict.rentPage.kicker}</p>
         <h1 className="mt-3 font-serif text-4xl tracking-tight sm:text-5xl">

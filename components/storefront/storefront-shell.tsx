@@ -6,14 +6,9 @@ import { Menu, MessageCircle, ShoppingBag, X } from 'lucide-react'
 import { loadCart, cartCount } from '@/lib/cart'
 import LanguageSwitcher from '@/components/storefront/language-switcher'
 import type { Dictionary, Locale } from '@/lib/i18n/dictionaries'
+import { pick } from '@/lib/i18n/dictionaries'
 
-const NAV_KEYS = [
-  { key: 'home', href: '/' },
-  { key: 'rent', href: '/rent' },
-  { key: 'phones', href: '/rent?category=smartphones' },
-  { key: 'cameras', href: '/rent?category=cameras' },
-  { key: 'actionCameras', href: '/rent?category=action-cameras' },
-] as const
+export type NavCategory = { slug: string; nameId: string; nameEn: string }
 
 export default function StorefrontShell({
   children,
@@ -22,6 +17,7 @@ export default function StorefrontShell({
   dict,
   locale,
   adminSlot,
+  navCategories = [],
 }: {
   children: React.ReactNode
   whatsapp?: string
@@ -37,7 +33,17 @@ export default function StorefrontShell({
   locale: Locale
   /** Optional server-rendered slot next to the cart (e.g. staff Admin chip). */
   adminSlot?: React.ReactNode
+  /** Staff-managed navbar categories (§43). Empty → only Home/Rent show. */
+  navCategories?: NavCategory[]
 }) {
+  const navItems: { label: string; href: string }[] = [
+    { label: dict.nav.home, href: '/' },
+    { label: dict.nav.rent, href: '/rent' },
+    ...navCategories.map((c) => ({
+      label: pick(locale, c.nameEn, c.nameId),
+      href: `/rent?category=${c.slug}`,
+    })),
+  ]
   const [menuOpen, setMenuOpen] = useState(false)
   const [count, setCount] = useState(0)
   const brand = company?.businessName || 'Go-Sewa'
@@ -70,9 +76,9 @@ export default function StorefrontShell({
             )}
           </Link>
           <nav className="hidden items-center gap-7 text-sm font-semibold text-[#173b3b]/75 md:flex">
-            {NAV_KEYS.map((n) => (
+            {navItems.map((n) => (
               <Link key={n.href} href={n.href} className="transition hover:text-[#e76f51]">
-                {dict.nav[n.key]}
+                {n.label}
               </Link>
             ))}
           </nav>
@@ -102,14 +108,14 @@ export default function StorefrontShell({
         </div>
         {menuOpen && (
           <nav className="flex flex-col gap-4 border-t border-[#173b3b]/10 bg-[#f8f6f1] px-5 py-5 md:hidden">
-            {NAV_KEYS.map((n) => (
+            {navItems.map((n) => (
               <Link
                 key={n.href}
                 href={n.href}
                 onClick={() => setMenuOpen(false)}
                 className="text-sm font-semibold text-[#173b3b]/80"
               >
-                {dict.nav[n.key]}
+                {n.label}
               </Link>
             ))}
           </nav>

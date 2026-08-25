@@ -1,6 +1,6 @@
-import { eq } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { products, devices, rentalPricingRules, type PricingRuleKind } from '@/lib/db/schema'
+import { categories, products, devices, rentalPricingRules, type PricingRuleKind } from '@/lib/db/schema'
 import { logActivity, uid } from './audit'
 import type { DeviceStatus } from './devices'
 
@@ -42,6 +42,92 @@ export type ProductInput = {
 
 function slugify(value: string): string {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+
+// --- Categories ----------------------------------------------------------------
+
+/**
+ * Category administration (§5/§42). `showInNav` controls whether a category
+ * appears as a link in the storefront navbar; with none flagged, the navbar
+ * simply shows Home/Rent. All writes are audit-logged.
+ */
+
+export async function listCategoriesAdmin() {
+  return db.select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.nameEn))
+}
+
+export async function createCategory(input: {
+  nameId: string
+  nameEn: string
+  showInNav?: boolean
+  sortOrder?: number
+}, byUserId?: string | null) {
+  const nameId = input.nameId.trim()
+  const nameEn = input.nameEn.trim()
+  if (!nameId || !nameEn) throw new Error('Both Indonesian and English names are required.')
+  const baseSlug = slugify(input.nameEn)
+  if (!baseSlug) throw new Error('The English name must contain letters or numbers for the slug.')
+  // Ensure uniqueness without failing on duplicates.
+  let slug = baseSlug
+  for (let attempt = 1; ; attempt++) {
+    const existing = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, slug)).limit(1)
+    if (existing.length === 0) break
+    slug = `${baseSlug}-${attempt + 1}`
+  }
+  const id = uid()
+  await db.insert(categories).values({
+    id, slug, nameId, nameEn,
+    showInNav: input.showInNav ?? false,
+    sortOrder: input.sortOrder ?? 99,
+    active: true,
+  })
+  await logActivity({
+    userId: byUserId, action: 'category_created', entity: 'category',
+    entityId: id, metadata: { slug, nameEn },
+  })
+  return { id, slug }
+}
+
+export async function updateCategory(id: string, patch: {
+  nameId?: string
+  nameEn?: string
+  showInNav?: boolean
+  sortOrder?: number
+  active?: boolean
+}, byUserId?: string | null) {
+  const set: Record<string, unknown> = {}
+  if (patch.nameId !== undefined) {
+    if (!patch.nameId.trim()) throw new Error('Indonesian name is required.')
+    set.nameId = patch.nameId.trim()
+  }
+  if (patch.nameEn !== undefined) {
+    if (!patch.nameEn.trim()) throw new Error('English name is required.')
+    set.nameEn = patch.nameEn.trim()
+  }
+  if (patch.showInNav !== undefined) set.showInNav = patch.showInNav
+  if (patch.sortOrder !== undefined) set.sortOrder = Math.max(0, Math.floor(patch.sortOrder))
+  if (patch.active !== undefined) set.active = patch.active
+  if (Object.keys(set).length === 0) return
+  await db.update(categories).set(set).where(eq(categories.id, id))
+  await logActivity({
+    userId: byUserId, action: 'category_updated', entity: 'category',
+    entityId: id, metadata: patch as Record<string, unknown>,
+  })
+}
+
+/** Delete a category. Refuses while products still reference it — reassign them first. */
+export async function deleteCategory(id: string, byUserId?: string | null) {
+  const inUse = await db.select({ id: products.id }).from(products).where(eq(products.categoryId, id)).limit(1)
+  if (inUse.length > 0) {
+    throw new Error('This category still has products assigned. Move them to another category first.')
+  }
+  const row = (await db.select().from(categories).where(eq(categories.id, id)).limit(1))[0]
+  if (!row) throw new Error('Category not found.')
+  await db.delete(categories).where(eq(categories.id, id))
+  await logActivity({
+    userId: byUserId, action: 'category_deleted', entity: 'category',
+    entityId: id, metadata: { slug: row.slug, nameEn: row.nameEn },
+  })
 }
 
 export async function createProduct(input: ProductInput, byUserId?: string | null) {

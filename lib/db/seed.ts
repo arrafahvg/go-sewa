@@ -44,7 +44,7 @@ export async function seed(): Promise<void> {
     ['accessories', 'Aksesoris', 'Accessories', 5],
   ] as const) {
     const id = uid()
-    await db.insert(categories).values({ id, slug, nameId, nameEn, sortOrder, active: true, createdAt: now() })
+    await db.insert(categories).values({ id, slug, nameId, nameEn, sortOrder, showInNav: true, active: true, createdAt: now() })
     categorySlugToId[slug] = id
   }
 

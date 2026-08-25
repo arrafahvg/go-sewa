@@ -44,6 +44,18 @@ export async function getCategories(): Promise<CatalogCategory[]> {
     }))
 }
 
+/**
+ * Categories flagged for the storefront navbar (§43), staff-managed at
+ * /admin/content/categories. Empty list → the navbar shows only Home/Rent.
+ */
+export async function getNavCategories(): Promise<CatalogCategory[]> {
+  return (await db.select().from(categories).where(
+    and(eq(categories.active, true), eq(categories.showInNav, true)),
+  ).orderBy(asc(categories.sortOrder))).map((c) => ({
+    slug: c.slug, nameId: c.nameId, nameEn: c.nameEn,
+  }))
+}
+
 export async function getCatalogProducts(): Promise<CatalogProduct[]> {
   const rows = await db.select().from(products).where(eq(products.active, true))
   const catMap = new Map((await getCategories()).map((c) => [c.slug, c]))

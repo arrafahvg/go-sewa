@@ -1,18 +1,18 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { Languages } from 'lucide-react'
 import { LOCALE_COOKIE, type Locale } from '@/lib/i18n/dictionaries'
 
 /**
- * Language toggle (§9): writes the locale cookie and refreshes server
- * components so every customer-facing string re-renders in the new language.
+ * Language toggle (§9): writes the locale cookie then does a FULL reload so
+ * every server component re-resolves the locale — no reliance on RSC refresh
+ * semantics. Bulletproof over fast.
  */
 export default function LanguageSwitcher({ locale }: { locale: Locale }) {
-  const router = useRouter()
   function switchTo(next: Locale) {
+    if (next === locale) return
     document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=${60 * 60 * 24 * 365}`
-    router.refresh()
+    window.location.reload()
   }
   return (
     <div className="flex items-center gap-1 rounded-full border border-[#173b3b]/10 bg-white px-1 py-1 text-[11px] font-bold">

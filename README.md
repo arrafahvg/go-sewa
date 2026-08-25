@@ -144,6 +144,14 @@ a product's price later never mutates historical rentals.
   (`tests/integration/*.test.ts`). Integration tests run automatically when
   `TEST_DATABASE_URL` points at a disposable database with the schema applied
   and are skipped otherwise.
+- **Category management (§5/§42)**: admin manages categories at
+  `/admin/content/categories` — create/edit (ID + EN names), sort order,
+  activate/hide, delete (blocked while products reference it), and a
+  **"Show in navbar"** flag per category. The storefront navbar renders the
+  flagged categories dynamically (localized names); with none flagged it shows
+  only Home/Rent. The product form has a **category picker** so every product
+  can be grouped; seed data flags all five demo categories for the navbar.
+  Migration `0009` adds `categories.show_in_nav`.
 - **SEO basics**: `app/sitemap.ts` emits static routes + every active, indexable
   product page; `app/robots.ts` allows the storefront and disallows
   `/admin`, `/api`, `/d` and `/account`. Still open: per-product OG images and

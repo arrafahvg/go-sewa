@@ -3,6 +3,11 @@ export type Locale = 'id' | 'en'
 /** Cookie name shared between the server locale resolver and the language switcher. */
 export const LOCALE_COOKIE = 'go_lang'
 
+/** Pick between the two localized fields stored on catalog/content rows (client-safe). */
+export function pick<T>(locale: Locale, enValue: T, idValue: T): T {
+  return locale === 'id' ? idValue : enValue
+}
+
 /**
  * Storefront UI dictionary (§9). Customer-facing strings live here — never
  * inline literals in components. Admin console stays English for now.

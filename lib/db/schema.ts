@@ -42,6 +42,8 @@ export const categories = pgTable('categories', {
   nameId: text('name_id').notNull(),
   nameEn: text('name_en').notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
+  /** When true the category appears as a link in the storefront navbar (§43). */
+  showInNav: boolean('show_in_nav').notNull().default(false),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })

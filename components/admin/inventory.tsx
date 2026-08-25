@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Plus, Package, Smartphone, ImagePlus, MapPin, X } from 'lucide-react'
 import { formatMoney } from '@/lib/utils/money'
+import Link from 'next/link'
 import type { AdminDevice } from '@/lib/data/admin'
 import type { TrackingView } from '@/app/admin/inventory/page'
 import {
@@ -17,6 +18,7 @@ export type AdminProductView = {
   name: string
   slug: string
   description: string | null
+  categoryId: string | null
   depositCents: number
   depositRequired: boolean
   active: boolean
@@ -33,6 +35,7 @@ export type AdminPricingRule = {
   active: boolean
   priority: number
 }
+export type AdminCategory = { id: string; slug: string; nameId: string; nameEn: string }
 
 const inputCls = 'mt-1 w-full rounded-lg border border-[#173b3b]/15 bg-white px-3 py-2 text-sm outline-none focus:border-[#387066]'
 const RULE_KINDS: PricingRuleKind[] = ['daily', 'weekly', 'monthly', 'weekend', 'seasonal', 'promo', 'custom']
@@ -43,13 +46,14 @@ function Notice({ error, success }: { error?: string | null; success?: string | 
 }
 
 export default function InventoryManager({
-  products, rules, devices, trackingProviderConnected, tracking,
+  products, rules, devices, trackingProviderConnected, tracking, categories,
 }: {
   products: AdminProductView[]
   rules: AdminPricingRule[]
   devices: AdminDevice[]
   trackingProviderConnected: boolean
   tracking: TrackingView[]
+  categories: AdminCategory[]
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<'products' | 'devices'>('products')
@@ -72,7 +76,7 @@ export default function InventoryManager({
       </div>
 
       {tab === 'products'
-        ? <ProductsPanel products={products} rules={rules} deviceCountByProduct={deviceCountByProduct} onChanged={refresh} />
+        ? <ProductsPanel products={products} rules={rules} deviceCountByProduct={deviceCountByProduct} onChanged={refresh} categories={categories} />
         : <DevicesPanel products={products} devices={devices} onChanged={refresh} trackingProviderConnected={trackingProviderConnected} trackingByDevice={trackingByDevice} />}
     </div>
   )
@@ -80,11 +84,12 @@ export default function InventoryManager({
 
 // --- Products -----------------------------------------------------------------
 
-function ProductsPanel({ products, rules, deviceCountByProduct, onChanged }: {
+function ProductsPanel({ products, rules, deviceCountByProduct, onChanged, categories }: {
   products: AdminProductView[]
   rules: AdminPricingRule[]
   deviceCountByProduct: Map<string, number>
   onChanged: () => void
+  categories: AdminCategory[]
 }) {
   const [editing, setEditing] = useState<AdminProductView | 'new' | null>(null)
   const [rulesFor, setRulesFor] = useState<string | null>(null)
@@ -95,7 +100,7 @@ function ProductsPanel({ products, rules, deviceCountByProduct, onChanged }: {
         <Plus size={15} /> New product
       </button>
 
-      {editing === 'new' && <ProductForm product={null} onDone={(ok) => { if (ok) { setEditing(null); onChanged() } }} />}
+      {editing === 'new' && <ProductForm product={null} categories={categories} onDone={(ok) => { if (ok) { setEditing(null); onChanged() } }} />}
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-[#173b3b]/10 bg-white">
         <table className="w-full min-w-[720px] text-left text-sm">
@@ -123,7 +128,7 @@ function ProductsPanel({ products, rules, deviceCountByProduct, onChanged }: {
       </div>
 
       {editing && editing !== 'new' && (
-        <ProductForm product={editing} onDone={(ok) => { if (ok) { setEditing(null); onChanged() } }} />
+        <ProductForm product={editing} categories={categories} onDone={(ok) => { if (ok) { setEditing(null); onChanged() } }} />
       )}
 
       {rulesFor && (
@@ -134,9 +139,10 @@ function ProductsPanel({ products, rules, deviceCountByProduct, onChanged }: {
 }
 
 
-function ProductForm({ product, onDone }: { product: AdminProductView | null; onDone: (ok: boolean) => void }) {
+function ProductForm({ product, categories, onDone }: { product: AdminProductView | null; categories: AdminCategory[]; onDone: (ok: boolean) => void }) {
   const [name, setName] = useState(product?.name ?? '')
   const [slug, setSlug] = useState(product?.slug ?? '')
+  const [categoryId, setCategoryId] = useState(product?.categoryId ?? '')
   const [description, setDescription] = useState(product?.description ?? '')
   const [deposit, setDeposit] = useState(String(product?.depositCents ?? 0))
   const [depositRequired, setDepositRequired] = useState(product?.depositRequired ?? false)
@@ -193,6 +199,7 @@ function ProductForm({ product, onDone }: { product: AdminProductView | null; on
       id: product?.id,
       name,
       slug,
+      categoryId: categoryId || null,
       description,
       depositCents: Math.round(Number(deposit) || 0),
       depositRequired,
@@ -211,6 +218,14 @@ function ProductForm({ product, onDone }: { product: AdminProductView | null; on
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <label className="block text-xs font-bold text-[#173b3b]/60">Name<input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} /></label>
         <label className="block text-xs font-bold text-[#173b3b]/60">Slug {product && <span className="font-normal">(locked after creation)</span>}<input value={slug} onChange={(e) => setSlug(e.target.value)} disabled={!!product} className={`${inputCls} ${product ? 'opacity-50' : ''}`} placeholder="auto-generated from name" /></label>
+        <div className="text-xs font-bold text-[#173b3b]/60">
+          Category
+          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputCls}>
+            <option value="">— No category —</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.nameEn} ({c.nameId})</option>)}
+          </select>
+          <span className="mt-1 block font-normal">Groups the product on `/rent` and can appear in the navbar (<Link href="/admin/content/categories" className="text-[#387066] underline" target="_blank">manage categories</Link>).</span>
+        </div>
         <label className="block text-xs font-bold text-[#173b3b]/60">Deposit (Rp)<input type="number" min={0} value={deposit} onChange={(e) => setDeposit(e.target.value)} className={inputCls} /></label>
         <div className="text-xs font-bold text-[#173b3b]/60">
           Product image
