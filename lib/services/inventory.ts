@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm'
+import { asc, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { categories, products, devices, rentalPricingRules, type PricingRuleKind } from '@/lib/db/schema'
 import { logActivity, uid } from './audit'
@@ -61,6 +61,7 @@ export async function createCategory(input: {
   nameEn: string
   showInNav?: boolean
   sortOrder?: number
+  productIds?: string[]
 }, byUserId?: string | null) {
   const nameId = input.nameId.trim()
   const nameEn = input.nameEn.trim()
@@ -81,9 +82,18 @@ export async function createCategory(input: {
     sortOrder: input.sortOrder ?? 99,
     active: true,
   })
+  // Optionally pull existing products into the new category in the same step.
+  let productsAssigned = 0
+  if (input.productIds?.length) {
+    const moved = await db.update(products)
+      .set({ categoryId: id })
+      .where(inArray(products.id, input.productIds))
+      .returning({ id: products.id })
+    productsAssigned = moved.length
+  }
   await logActivity({
     userId: byUserId, action: 'category_created', entity: 'category',
-    entityId: id, metadata: { slug, nameEn },
+    entityId: id, metadata: { slug, nameEn, productsAssigned },
   })
   return { id, slug }
 }

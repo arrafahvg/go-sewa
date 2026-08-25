@@ -11,6 +11,7 @@ import {
   saveProductAction, uploadProductImageAction, savePricingRuleAction, deletePricingRuleAction, saveDeviceAction,
 } from '@/app/actions/inventory'
 import { saveTrackingConfigAction, pollDeviceLocationAction } from '@/app/actions/tracking'
+import { createCategoryAction } from '@/app/actions/categories'
 
 type PricingRuleKind = 'daily' | 'weekly' | 'monthly' | 'weekend' | 'seasonal' | 'promo' | 'custom'
 export type AdminProductView = {
@@ -143,6 +144,9 @@ function ProductForm({ product, categories, onDone }: { product: AdminProductVie
   const [name, setName] = useState(product?.name ?? '')
   const [slug, setSlug] = useState(product?.slug ?? '')
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? '')
+  const [newCatOpen, setNewCatOpen] = useState(false)
+  const [newCatNameId, setNewCatNameId] = useState('')
+  const [newCatNameEn, setNewCatNameEn] = useState('')
   const [description, setDescription] = useState(product?.description ?? '')
   const [deposit, setDeposit] = useState(String(product?.depositCents ?? 0))
   const [depositRequired, setDepositRequired] = useState(product?.depositRequired ?? false)
@@ -195,11 +199,19 @@ function ProductForm({ product, categories, onDone }: { product: AdminProductVie
 
   async function submit() {
     setBusy(true); setError(null)
+    let finalCategoryId = categoryId || null
+    if (newCatOpen) {
+      if (!newCatNameId.trim() || !newCatNameEn.trim()) { setBusy(false); setError('Enter both the Indonesian and English names for the new category.'); return }
+      const cat = await createCategoryAction({ nameId: newCatNameId, nameEn: newCatNameEn, showInNav: true })
+      const catError = cat.ok ? undefined : cat.error
+      if (!cat.ok || !cat.id) { setBusy(false); setError(catError ?? 'Could not create the new category.'); return }
+      finalCategoryId = cat.id
+    }
     const res = await saveProductAction({
       id: product?.id,
       name,
       slug,
-      categoryId: categoryId || null,
+      categoryId: finalCategoryId,
       description,
       depositCents: Math.round(Number(deposit) || 0),
       depositRequired,
@@ -220,10 +232,24 @@ function ProductForm({ product, categories, onDone }: { product: AdminProductVie
         <label className="block text-xs font-bold text-[#173b3b]/60">Slug {product && <span className="font-normal">(locked after creation)</span>}<input value={slug} onChange={(e) => setSlug(e.target.value)} disabled={!!product} className={`${inputCls} ${product ? 'opacity-50' : ''}`} placeholder="auto-generated from name" /></label>
         <div className="text-xs font-bold text-[#173b3b]/60">
           Category
-          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputCls}>
+          <select value={newCatOpen ? '__new' : categoryId} onChange={(e) => { const v = e.target.value; if (v === '__new') { setNewCatOpen(true) } else { setNewCatOpen(false); setCategoryId(v) } }} className={inputCls}>
             <option value="">— No category —</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.nameEn} ({c.nameId})</option>)}
+            <option value="__new">+ Create new category…</option>
           </select>
+          {newCatOpen && (
+            <div className="mt-2 grid gap-2 rounded-xl border border-[#173b3b]/15 bg-[#faf8f2] p-3 sm:grid-cols-2">
+              <label className="block text-xs font-bold text-[#173b3b]/60">New category name (Indonesian)
+                <input value={newCatNameId} onChange={(e) => setNewCatNameId(e.target.value)} className={inputCls} placeholder="e.g. Drone" />
+              </label>
+              <label className="block text-xs font-bold text-[#173b3b]/60">New category name (English)
+                <input value={newCatNameEn} onChange={(e) => setNewCatNameEn(e.target.value)} className={inputCls} placeholder="e.g. Drones" />
+              </label>
+              <p className="text-xs font-normal text-[#173b3b]/55 sm:col-span-2">
+                The category is created when you save this product. It will show in the navbar by default; adjust it later under Content → Categories.
+              </p>
+            </div>
+          )}
           <span className="mt-1 block font-normal">Groups the product on `/rent` and can appear in the navbar (<Link href="/admin/content/categories" className="text-[#387066] underline" target="_blank">manage categories</Link>).</span>
         </div>
         <label className="block text-xs font-bold text-[#173b3b]/60">Deposit (Rp)<input type="number" min={0} value={deposit} onChange={(e) => setDeposit(e.target.value)} className={inputCls} /></label>

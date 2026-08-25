@@ -45,7 +45,6 @@ export default async function Home() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a href="/rent" className="rounded-full bg-[#173b3b] px-7 py-4 text-sm font-bold text-white transition hover:opacity-90">{dict.home.browseDevices}</a>
-              <a href="/rent?category=action-cameras" className="rounded-full border border-[#173b3b]/15 bg-white px-7 py-4 text-sm font-bold transition hover:bg-[#e4eee8]">{dict.home.browseCameras}</a>
             </div>
           </div>
           <div className="relative">

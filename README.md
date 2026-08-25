@@ -149,9 +149,14 @@ a product's price later never mutates historical rentals.
   activate/hide, delete (blocked while products reference it), and a
   **"Show in navbar"** flag per category. The storefront navbar renders the
   flagged categories dynamically (localized names); with none flagged it shows
-  only Home/Rent. The product form has a **category picker** so every product
-  can be grouped; seed data flags all five demo categories for the navbar.
-  Migration `0009` adds `categories.show_in_nav`.
+  only Home/Rent. The product form has a **category picker with an inline
+  "create new category" option** (ID/EN names; the category is created when the
+  product is saved), and the category manager lets staff **assign existing
+  products to a newly created category** in the same step (recorded in the
+  audit log). Navbar visibility and storefront status use explicit dropdowns:
+  **Show in navbar / Hidden from navbar** and **Active (visible on /rent) /
+  Inactive (hidden from storefront)**. Seed data flags all five demo categories
+  for the navbar. Migration `0009` adds `categories.show_in_nav`.
 - **SEO basics**: `app/sitemap.ts` emits static routes + every active, indexable
   product page; `app/robots.ts` allows the storefront and disallows
   `/admin`, `/api`, `/d` and `/account`. Still open: per-product OG images and
@@ -323,4 +328,14 @@ User-reported items, tracked here until fixed:
    `centsToRupiah()` helpers now enforce the single convention everywhere
    (staff types plain Rupiah → stored ×100 minor units → rendered as `Rp` via
    `formatMoney`). All money remains IDR/Rupiah end-to-end.
+5. **`/rent` intermittently returned "This page couldn't load — a server error
+   occurred"** (e.g. on `/?category=action-cameras`), while the homepage worked.
+   → The catalogue render ran ~1 + 2×N sequential DB queries per product
+   (category + price lookup), which exhausted the Supabase pooler connection
+   budget on cold-started serverless functions. `getCatalogProducts()` now runs
+   exactly three parallel queries (products, categories, daily pricing rules)
+   and resolves joins in memory (§81), keeping `/rent`, `/rent/[slug]` and the
+   homepage fast and pool-safe. The homepage hero "Browse cameras" shortcut was
+   also removed — the single "Browse devices" CTA covers the storefront and the
+   category sections/navbar buttons already deep-link into the catalogue.
 

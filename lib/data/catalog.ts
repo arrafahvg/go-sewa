@@ -28,15 +28,6 @@ export type CatalogCategory = {
   nameEn: string
 }
 
-/** Effective daily price from the lowest-priority "daily" rule (fallback to 0). */
-async function dailyPriceFor(productId: string): Promise<number> {
-  const rules = await db.select().from(rentalPricingRules).where(
-    and(eq(rentalPricingRules.productId, productId), eq(rentalPricingRules.active, true)),
-  ).orderBy(asc(rentalPricingRules.priority))
-  const daily = rules.find((r) => r.kind === 'daily')
-  return daily?.centsPerDay ?? 0
-}
-
 export async function getCategories(): Promise<CatalogCategory[]> {
   return (await db.select().from(categories).where(eq(categories.active, true))
     .orderBy(asc(categories.sortOrder))).map((c) => ({
@@ -57,15 +48,28 @@ export async function getNavCategories(): Promise<CatalogCategory[]> {
 }
 
 export async function getCatalogProducts(): Promise<CatalogProduct[]> {
-  const rows = await db.select().from(products).where(eq(products.active, true))
-  const catMap = new Map((await getCategories()).map((c) => [c.slug, c]))
-  const result: CatalogProduct[] = []
-  for (const p of rows) {
-    const cat = p.categoryId
-      ? (await db.select().from(categories).where(eq(categories.id, p.categoryId)))[0]
-      : null
-    const c = cat ? catMap.get(cat.slug) : null
-    result.push({
+  // Batched lookups — three fixed queries regardless of catalogue size, instead
+  // of an N+1 round-trip per product. Keeps serverless + pooled DB requests fast
+  // and avoids exhausting the connection pool (§81).
+  const [rows, allCats, dailyRules] = await Promise.all([
+    db.select().from(products).where(eq(products.active, true)),
+    db.select().from(categories),
+    db.select().from(rentalPricingRules)
+      .where(eq(rentalPricingRules.active, true))
+      .orderBy(asc(rentalPricingRules.priority)),
+  ])
+  const catById = new Map(allCats.map((c) => [c.id, c]))
+  const activeSlugs = new Set(allCats.filter((c) => c.active).map((c) => c.slug))
+  // Lowest-priority active "daily" rule wins, matching the old per-product query.
+  const dailyByProduct = new Map<string, number>()
+  for (const r of dailyRules) {
+    if (r.kind !== 'daily' || dailyByProduct.has(r.productId)) continue
+    dailyByProduct.set(r.productId, r.centsPerDay)
+  }
+  return rows.map((p) => {
+    const cat = p.categoryId ? (catById.get(p.categoryId) ?? null) : null
+    const c = cat && activeSlugs.has(cat.slug) ? cat : null
+    return {
       id: p.id,
       slug: p.slug,
       name: p.name,
@@ -77,12 +81,11 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
       categoryNameEn: c?.nameEn ?? null,
       depositCents: p.depositCents,
       depositRequired: p.depositRequired,
-      dailyCents: await dailyPriceFor(p.id),
+      dailyCents: dailyByProduct.get(p.id) ?? 0,
       specs: p.specs ?? {},
       gallery: [p.imageUrl, ...(p.gallery ?? [])].filter((u): u is string => !!u),
-    })
-  }
-  return result
+    }
+  })
 }
 
 export async function getProductBySlug(slug: string): Promise<CatalogProduct | null> {

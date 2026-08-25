@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import CategoryManager from '@/components/admin/category-manager'
 import { getCurrentUser } from '@/lib/services/auth'
-import { listCategoriesAdmin } from '@/lib/services/inventory'
+import { listCategoriesAdmin, listProducts } from '@/lib/services/inventory'
 
 export const metadata: Metadata = {
   title: 'Go-Sewa Admin — Categories',
@@ -17,6 +17,7 @@ export default async function CategoriesPage() {
   if (!current) redirect('/sign-in')
 
   const categories = await listCategoriesAdmin()
+  const products = await listProducts()
 
   return (
     <div className="min-h-screen bg-[#f4f1ea] text-[#173b3b]">
@@ -42,6 +43,7 @@ export default async function CategoriesPage() {
               sortOrder: c.sortOrder,
               active: c.active,
             }))}
+            products={products.map((p) => ({ id: p.id, name: p.name }))}
           />
         </div>
       </div>

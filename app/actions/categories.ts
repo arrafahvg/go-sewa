@@ -18,6 +18,7 @@ export async function createCategoryAction(input: {
   nameEn: string
   showInNav?: boolean
   sortOrder?: number
+  productIds?: string[]
 }): Promise<Result & { id?: string; slug?: string }> {
   const staff = await requireStaff()
   if (!staff) return { ok: false, error: 'You need staff permissions to manage categories.' }
