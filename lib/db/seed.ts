@@ -20,6 +20,7 @@ export async function seed(): Promise<void> {
   for (const [key, value] of [
     ['whatsapp_number', '628123456789'],
     ['business_name', 'Go-Sewa'],
+    ['favicon_url', '/favicon.svg'],
     ['business_address', 'Jl. Raya Seminyak No. 12, Bali, Indonesia'],
     ['business_email', 'hello@gosewa.id'],
     ['phone_number', '+62 812 3456 7890'],

@@ -46,6 +46,7 @@ const en = {
   card: {
     perDay: 'per day',
     deposit: 'Deposit',
+    notAvailable: 'Not available',
   },
   rentPage: {
     kicker: 'The lineup',
@@ -210,6 +211,7 @@ const id: Dictionary = {
   card: {
     perDay: 'per hari',
     deposit: 'Jaminan',
+    notAvailable: 'Tidak tersedia',
   },
   rentPage: {
     kicker: 'Pilihan kami',

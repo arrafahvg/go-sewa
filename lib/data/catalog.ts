@@ -1,7 +1,8 @@
-import { and, eq, asc } from 'drizzle-orm'
+import { and, eq, asc, gt, lt, inArray, isNull } from 'drizzle-orm'
 import { db, dbRequest } from '@/lib/db'
-import { categories, products, rentalPricingRules, rentalAddOns } from '@/lib/db/schema'
+import { categories, products, rentalPricingRules, rentalAddOns, devices, bookings, bookingDeviceAllocations } from '@/lib/db/schema'
 import { getSettings } from '@/lib/services/settings'
+import { BLOCKING_BOOKING_STATUSES, UNBOOKABLE_DEVICE_STATUSES } from '@/lib/services/availability'
 
 export type CatalogProduct = {
   id: string
@@ -20,6 +21,8 @@ export type CatalogProduct = {
   specs: Record<string, string>
   /** Product gallery images (§11); first entry mirrors imageUrl when set. */
   gallery: string[]
+  /** Current stock snapshot: active units and how many are free right now. */
+  stock: { total: number; freeNow: number }
 }
 
 export type CatalogCategory = {
@@ -59,8 +62,19 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
       db.select().from(rentalPricingRules)
         .where(eq(rentalPricingRules.active, true))
         .orderBy(asc(rentalPricingRules.priority)),
+      // Stock snapshot inputs (batched — keeps the read pool-safe, §81).
+      db.select({ id: devices.id, productId: devices.productId, status: devices.status }).from(devices).where(eq(devices.active, true)),
+      db.select({ deviceId: bookingDeviceAllocations.deviceId })
+        .from(bookingDeviceAllocations)
+        .innerJoin(bookings, eq(bookings.id, bookingDeviceAllocations.bookingId))
+        .where(and(
+          isNull(bookingDeviceAllocations.releasedAt),
+          gt(bookings.endsAt, new Date()),
+          lt(bookings.startsAt, new Date()),
+          inArray(bookings.status, BLOCKING_BOOKING_STATUSES),
+        )),
     ]),
-  ).then(([rows, allCats, dailyRules]) => {
+  ).then(([rows, allCats, dailyRules, activeDevices, nowAllocs]) => {
     const catById = new Map(allCats.map((c) => [c.id, c]))
     const activeSlugs = new Set(allCats.filter((c) => c.active).map((c) => c.slug))
     // Lowest-priority active "daily" rule wins, matching the old per-product query.
@@ -68,6 +82,18 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
     for (const r of dailyRules) {
       if (r.kind !== 'daily' || dailyByProduct.has(r.productId)) continue
       dailyByProduct.set(r.productId, r.centsPerDay)
+    }
+    // Stock snapshot: freeNow = an active unit that is not unbookable and not
+    // held by a blocking booking overlapping right now. total === 0 covers
+    // products registered without any physical unit yet.
+    const nowHeld = new Set(nowAllocs.map((a) => a.deviceId))
+    const unbookable = new Set(UNBOOKABLE_DEVICE_STATUSES as readonly string[])
+    const stockByProduct = new Map<string, { total: number; freeNow: number }>()
+    for (const d of activeDevices) {
+      const s = stockByProduct.get(d.productId) ?? { total: 0, freeNow: 0 }
+      s.total += 1
+      if (!unbookable.has(d.status) && !nowHeld.has(d.id)) s.freeNow += 1
+      stockByProduct.set(d.productId, s)
     }
     return rows.map((p) => {
       const cat = p.categoryId ? (catById.get(p.categoryId) ?? null) : null
@@ -87,6 +113,7 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
         dailyCents: dailyByProduct.get(p.id) ?? 0,
         specs: p.specs ?? {},
         gallery: [p.imageUrl, ...(p.gallery ?? [])].filter((u): u is string => !!u),
+        stock: stockByProduct.get(p.id) ?? { total: 0, freeNow: 0 },
       }
     })
   })

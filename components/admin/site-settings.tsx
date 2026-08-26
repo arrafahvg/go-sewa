@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { ImagePlus, Loader2, Plus, Save, Trash2 } from 'lucide-react'
-import { updateSettingsAction, uploadLogoAction, removeLogoAction, uploadQrisAction, removeQrisAction } from '@/app/actions/settings'
+import { updateSettingsAction, uploadLogoAction, removeLogoAction, uploadQrisAction, removeQrisAction, uploadFaviconAction, removeFaviconAction } from '@/app/actions/settings'
 
 type Props = {
   /** Current settings values keyed by setting key. */
@@ -54,9 +54,11 @@ export default function SiteSettingsForm({ initial }: Props) {
     return parsed.length ? parsed : []
   })
   const [qrisUrl, setQrisUrl] = useState(initial['payment_qris_image_url'] ?? '')
+  const [faviconUrl, setFaviconUrl] = useState(initial['favicon_url'] ?? '/favicon.svg')
   const [state, setState] = useState<{ phase: 'idle' | 'loading' | 'ok' | 'error'; message?: string }>({ phase: 'idle' })
   const fileRef = useRef<HTMLInputElement>(null)
   const qrisFileRef = useRef<HTMLInputElement>(null)
+  const faviconFileRef = useRef<HTMLInputElement>(null)
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -66,6 +68,7 @@ export default function SiteSettingsForm({ initial }: Props) {
     const patch = {
       ...values,
       logo_url: logoUrl,
+      favicon_url: faviconUrl,
       payment_bank_accounts: JSON.stringify(cleanAccounts),
     }
     const res = await updateSettingsAction(patch)
@@ -125,6 +128,31 @@ export default function SiteSettingsForm({ initial }: Props) {
     else setState({ phase: 'error', message: res.error })
   }
 
+  async function onFaviconFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif'].includes(file.type)) { setState({ phase: 'error', message: 'Only PNG, JPG, WebP, SVG or GIF images are accepted.' }); return }
+    setState({ phase: 'loading' })
+    const reader = new FileReader()
+    reader.onload = async () => {
+      const dataUrl = String(reader.result)
+      const base64 = dataUrl.split(',')[1] ?? ''
+      const res = await uploadFaviconAction({ fileBase64: base64, mimeType: file.type })
+      if (res.ok && res.url) { setFaviconUrl(res.url); setState({ phase: 'ok', message: 'Favicon uploaded.' }) }
+      else if (!res.ok) setState({ phase: 'error', message: res.error })
+      else setState({ phase: 'error', message: 'Favicon uploaded but no URL was returned.' })
+    }
+    reader.onerror = () => setState({ phase: 'error', message: 'Could not read the file.' })
+    reader.readAsDataURL(file)
+    if (faviconFileRef.current) faviconFileRef.current.value = ''
+  }
+
+  async function removeFavicon() {
+    setState({ phase: 'loading' })
+    const res = await removeFaviconAction()
+    if (res.ok) { setFaviconUrl('/favicon.svg'); setState({ phase: 'ok', message: 'Favicon reset to the bundled default.' }) }
+    else setState({ phase: 'error', message: res.error })
+  }
   function updateAccount(index: number, patch: Partial<BankAccount>) {
     setAccounts((list) => list.map((a, i) => (i === index ? { ...a, ...patch } : a)))
   }
@@ -174,6 +202,36 @@ export default function SiteSettingsForm({ initial }: Props) {
           </label>
         </div>
 
+        {/* Managed browser favicon (§42) — rendered by the root layout */}
+        <div className="mt-5 rounded-xl border border-dashed border-[#173b3b]/20 bg-[#faf8f2] p-5">
+          <p className="text-sm font-semibold">Browser icon (favicon)</p>
+          <p className="mt-1 text-xs text-[#173b3b]/55">Shown on the browser tab. Falls back to the bundled icon when removed.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-[#173b3b]/10 bg-white">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={faviconUrl} alt="Favicon" className="h-10 w-10 object-contain" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => faviconFileRef.current?.click()} className="flex items-center gap-2 rounded-full bg-[#173b3b] px-4 py-2 text-sm font-bold text-white">
+                <ImagePlus size={15} /> Upload favicon
+              </button>
+              <input ref={faviconFileRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif" className="hidden" onChange={onFaviconFile} />
+              <button type="button" onClick={removeFavicon} className="flex items-center gap-2 rounded-full border border-[#173b3b]/15 px-4 py-2 text-sm font-bold text-[#a43d2b] hover:bg-[#f5d9d3]">
+                <Trash2 size={15} /> Reset to default
+              </button>
+            </div>
+          </div>
+          <label className="mt-4 block text-sm font-semibold">
+            Or favicon URL
+            <input
+              type="url"
+              value={faviconUrl}
+              onChange={(e) => setFaviconUrl(e.target.value)}
+              placeholder="/favicon.svg"
+              className="mt-2 w-full rounded-xl border border-[#173b3b]/15 bg-transparent px-4 py-3 font-normal outline-none focus:border-[#e76f51]"
+            />
+          </label>
+        </div>
         <div className="mt-5 grid gap-4">
           {FIELDS.map((f) => (
             <label key={f.key} className="block text-sm font-semibold">

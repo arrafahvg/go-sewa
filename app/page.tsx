@@ -80,7 +80,8 @@ export default async function Home() {
               category={pick(locale, p.categoryNameEn ?? dict.home.rentalCategoryFallback, (p as unknown as { categoryNameId?: string }).categoryNameId ?? p.categoryNameEn ?? dict.home.rentalCategoryFallback)}
               price={formatMoneyCompact(p.dailyCents)}
               deposit={p.depositCents}
-              labels={{ perDay: dict.card.perDay, deposit: dict.card.deposit }}
+              labels={{ perDay: dict.card.perDay, deposit: dict.card.deposit, notAvailable: dict.card.notAvailable }}
+              available={p.stock.freeNow > 0}
             />
           ))}
         </div>

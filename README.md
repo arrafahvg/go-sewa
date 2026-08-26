@@ -353,4 +353,22 @@ User-reported items, tracked here until fixed:
    The homepage hero "Browse cameras" shortcut was also removed — the single
    "Browse devices" CTA covers the storefront and the category sections/navbar
    buttons already deep-link into the catalogue.
+6. **`/rent` (and the homepage) listed zero devices even though every product
+   was active in admin.** The default "Any price" filter chip was defined as
+   `{ key: 'any', max: -1 }`, and the filter treated any defined `max` as a real
+   bound — so `dailyCents > -1` excluded literally everything. → The `any` band
+   now carries no bounds and no longer filters.
+7. **Registered devices could not be edited** (condition, serial/IMEI, color,
+   storage, battery, notes, asset code, Active flag) — the devices table was
+   read-only apart from the status changer. → Added a per-row **Edit** dialog
+   (`components/admin/device-editor.tsx`) writing through the existing
+   staff-gated, audit-logged `saveDeviceAction`; operational status stays in the
+   guarded "Set status" control (§4/§56).
+8. **Favicon 404s** (`icon.svg`, `icon-*-32x32.png`, `apple-icon.png`) and no way
+   to change the browser icon. → Bundled `public/favicon.svg` is the default, the
+   root layout renders it via `generateMetadata`, and staff can upload/replace or
+   reset it at `/admin/settings` (`favicon_url` setting, audit-logged). Also added
+   **"Not available"** badges: the catalogue now carries a per-product stock
+   snapshot (`stock.freeNow`), so products with no units yet — or with every unit
+   currently rented — stay listed but are clearly labelled instead of vanishing.
 

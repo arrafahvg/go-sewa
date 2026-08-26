@@ -83,7 +83,10 @@ export default function ProductDetail({ product, addOns, whatsapp = '62812345678
         <div className="flex flex-col gap-6">
           <div>
             <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{product.categoryNameEn}</p>
-            <h1 className="mt-2 font-serif text-4xl tracking-tight">{product.name}</h1>
+<h1 className="mt-2 font-serif text-4xl tracking-tight">{product.name}</h1>
+            {state.phase === 'error' && state.message === dict.detail.notAvailable && (
+              <span className="mt-3 inline-block rounded-full bg-[#f5d9d3] px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-[#a43d2b]">{dict.card.notAvailable}</span>
+            )}
             <p className="mt-3 text-sm leading-6 text-[#173b3b]/60">{product.description}</p>
           </div>
 

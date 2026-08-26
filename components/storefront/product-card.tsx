@@ -3,7 +3,7 @@ import { ArrowUpRight } from 'lucide-react'
 import { formatMoney } from '@/lib/utils/money'
 
 export default function ProductCard({
-  name, slug, imageUrl, category, price, deposit, labels,
+  name, slug, imageUrl, category, price, deposit, labels, available = true,
 }: {
   name: string
   slug: string
@@ -12,7 +12,9 @@ export default function ProductCard({
   price: string
   deposit: number
   /** Localized card labels (§9) — passed from the server dictionary. */
-  labels: { perDay: string; deposit: string }
+  labels: { perDay: string; deposit: string; notAvailable?: string }
+  /** Stock snapshot: false renders a Not available badge (no unit yet or all rented). */
+  available?: boolean
 }) {
   return (
     <Link
@@ -35,6 +37,11 @@ export default function ProductCard({
         <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-[#173b3b]">
           {category}
         </span>
+        {!available && labels.notAvailable && (
+          <span className="absolute right-3 top-3 rounded-full bg-[#173b3b]/85 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+            {labels.notAvailable}
+          </span>
+        )}
       </div>
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-start justify-between gap-3">

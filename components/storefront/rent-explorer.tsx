@@ -15,7 +15,7 @@ type CategoryOption = { slug: string; name: string }
 
 /** Price-band quick filters in Rp (daily rate). Labels come from the dictionary (§9). */
 const PRICE_BANDS: { key: string; min?: number; max?: number }[] = [
-  { key: 'any', max: -1 },
+  { key: 'any' },
   { key: 'under50', max: 50_000 },
   { key: '50to100', min: 50_000, max: 100_000 },
   { key: '100to150', min: 100_000, max: 150_000 },
@@ -185,7 +185,8 @@ function RentExplorerView(props: {
               category={p.categoryNameEn ?? dict.home.rentalCategoryFallback}
               price={formatMoneyCompact(p.dailyCents)}
               deposit={p.depositCents}
-              labels={{ perDay: dict.card.perDay, deposit: dict.card.deposit }}
+              labels={{ perDay: dict.card.perDay, deposit: dict.card.deposit, notAvailable: dict.card.notAvailable }}
+              available={p.stock.freeNow > 0}
             />
           ))}
         </div>

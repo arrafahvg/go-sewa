@@ -550,6 +550,8 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   phone_number: '',
   instagram_url: '',
   logo_url: '',
+  // Browser tab icon (§42) — bundled /favicon.svg unless staff upload one.
+  favicon_url: '/favicon.svg',
   maps_url: '',
   footer_text: 'Better gear for better stories. Made with care in Bali.',
   default_language: 'id',

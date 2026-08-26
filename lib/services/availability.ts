@@ -1,19 +1,19 @@
 import { and, eq, inArray, isNull, lt, gt } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
-  devices, bookings, bookingDeviceAllocations, availabilityBlocks,
+  devices, bookings, bookingDeviceAllocations, availabilityBlocks, bookingStatusEnum,
 } from '@/lib/db/schema'
 import { getSettingInt } from './settings'
 
 // Booking statuses that hold a device / reserve stock.
-const BLOCKING_BOOKING_STATUSES = [
+export const BLOCKING_BOOKING_STATUSES: (typeof bookingStatusEnum.enumValues)[number][] = [
   'draft', 'pending', 'awaiting_confirmation', 'confirmed', 'payment_pending',
   'partially_paid', 'paid', 'reserved', 'ready_for_pickup', 'out_for_delivery',
   'active_rental', 'return_due', 'overdue', 'returned', 'inspection',
 ]
 
 // Device statuses that make a physical unit unbookable regardless of dates.
-const UNBOOKABLE_DEVICE_STATUSES = ['maintenance', 'damaged', 'lost', 'retired', 'blocked'] as const
+export const UNBOOKABLE_DEVICE_STATUSES = ['maintenance', 'damaged', 'lost', 'retired', 'blocked'] as const
 
 export type AvailabilityResult = {
   productId: string

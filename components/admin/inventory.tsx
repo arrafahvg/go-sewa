@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/utils/money'
 import Link from 'next/link'
 import type { AdminDevice } from '@/lib/data/admin'
 import type { TrackingView } from '@/app/admin/inventory/page'
+import DeviceEditor from '@/components/admin/device-editor'
 import {
   saveProductAction, uploadProductImageAction, savePricingRuleAction, deletePricingRuleAction, saveDeviceAction,
 } from '@/app/actions/inventory'
@@ -394,10 +395,10 @@ function DevicesPanel({ products, devices, onChanged, trackingProviderConnected,
       <div className="mt-6 overflow-x-auto rounded-2xl border border-[#173b3b]/10 bg-white">
         <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="bg-[#f1eee7] text-xs text-[#173b3b]/50">
-            <tr>{['Asset code', 'Product', 'Status', 'Condition', 'IMEI / Serial', 'Storage', 'Battery', 'Tracking', 'Set status'].map((h, i) => <th key={i} className="px-5 py-3 font-semibold">{h}</th>)}</tr>
+            <tr>{['Asset code', 'Product', 'Status', 'Condition', 'IMEI / Serial', 'Storage', 'Battery', 'Tracking', 'Set status', 'Edit'].map((h, i) => <th key={i} className="px-5 py-3 font-semibold">{h}</th>)}</tr>
           </thead>
           <tbody>
-            {devices.length === 0 && <tr><td colSpan={9} className="px-5 py-10 text-center text-sm text-[#173b3b]/50">No physical devices yet — add units so the product becomes bookable.</td></tr>}
+            {devices.length === 0 && <tr><td colSpan={10} className="px-5 py-10 text-center text-sm text-[#173b3b]/50">No physical devices yet — add units so the product becomes bookable.</td></tr>}
             {devices.map((d) => (
               <tr key={d.id} className="border-t border-[#173b3b]/8 transition hover:bg-[#faf8f2]">
                 <td className="px-5 py-4 font-mono text-xs font-bold">{d.assetCode}</td>
@@ -409,6 +410,7 @@ function DevicesPanel({ products, devices, onChanged, trackingProviderConnected,
                 <td className="px-5 py-4 text-xs">{d.batteryHealth != null ? `${d.batteryHealth}%` : '—'}</td>
                 <td className="px-5 py-4"><TrackingCell device={d} config={trackingByDevice.get(d.id) ?? null} providerConnected={trackingProviderConnected} onChanged={onChanged} /></td>
                 <td className="px-5 py-4"><StatusChanger device={d} onDone={onChanged} /></td>
+                <td className="px-5 py-4"><DeviceEditor device={d} products={products} onDone={onChanged} /></td>
               </tr>
             ))}
           </tbody>
