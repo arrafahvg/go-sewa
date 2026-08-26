@@ -33,7 +33,7 @@ export default function AdminConsole({ bookings, customers, products }: { bookin
       </header>
 
       <nav className="flex gap-2 overflow-x-auto px-4 pt-6 sm:px-6 xl:px-10">
-        {([['overview', 'Overview', LayoutDashboard], ['bookings', 'Bookings', CalendarDays], ['new', '+ New Rental', Plus]] as const).map(([key, label, Icon]) => (
+        {([['overview', 'Overview', LayoutDashboard], ['bookings', 'Bookings', CalendarDays]] as const).map(([key, label, Icon]) => (
           <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${tab === key ? 'bg-[#173b3b] text-white' : 'bg-white text-[#173b3b]/70 hover:bg-[#e4eee8]'}`}>
             <Icon size={15} /> {label}
           </button>
@@ -46,7 +46,17 @@ export default function AdminConsole({ bookings, customers, products }: { bookin
       <main className="px-4 py-8 sm:px-6 xl:px-10">
         {tab === 'overview' && <Overview bookings={bookings} statusCounts={statusCounts} active={active} onNew={() => setTab('new')} />}
         {tab === 'bookings' && <BookingsTable bookings={bookings} />}
-        {tab === 'new' && <NewRentalForm products={products} customers={customers} />}
+        {tab === 'new' && (
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h1 className="font-serif text-3xl tracking-tight">New rental</h1>
+              <button onClick={() => setTab('overview')} className="rounded-full border border-[#173b3b]/15 bg-white px-4 py-2 text-xs font-bold text-[#173b3b]/70 hover:bg-[#e4eee8]">
+                ← Back to overview
+              </button>
+            </div>
+            <NewRentalForm products={products} customers={customers} />
+          </div>
+        )}
       </main>
     </div>
   )
