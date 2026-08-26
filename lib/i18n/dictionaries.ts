@@ -91,6 +91,8 @@ const en = {
     rentNow: 'Rent now',
     addToCart: 'Add to cart',
     needHelp: 'Need help choosing? Chat on WhatsApp',
+    specifications: 'Specifications',
+    depositRefundable: 'refundable deposit',
   },
   checkout: {
     title: 'Checkout',
@@ -256,6 +258,8 @@ const id: Dictionary = {
     rentNow: 'Sewa sekarang',
     addToCart: 'Masukkan keranjang',
     needHelp: 'Bingung memilih? Chat via WhatsApp',
+    specifications: 'Spesifikasi',
+    depositRefundable: 'jaminan (dikembalikan)',
   },
   checkout: {
     title: 'Checkout',

@@ -11,7 +11,7 @@ import type { CatalogProduct } from '@/lib/data/catalog'
 
 type AddOn = { id: string; nameEn: string; nameId: string; centsPerDay: number; centsPerRental: number }
 
-export default function ProductDetail({ product, addOns, whatsapp = '628123456789', dict }: { product: CatalogProduct; addOns: AddOn[]; whatsapp?: string; dict: Dictionary }) {
+export default function ProductDetail({ product, addOns, categoryLabel, whatsapp = '628123456789', dict }: { product: CatalogProduct; addOns: AddOn[]; whatsapp?: string; categoryLabel: string; dict: Dictionary }) {
   const router = useRouter()
   const [start, setStart] = useState(todayStr())
   const [end, setEnd] = useState(addDaysStr(3))
@@ -82,7 +82,7 @@ export default function ProductDetail({ product, addOns, whatsapp = '62812345678
 
         <div className="flex flex-col gap-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{product.categoryNameEn}</p>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{categoryLabel}</p>
 <h1 className="mt-2 font-serif text-4xl tracking-tight">{product.name}</h1>
             {state.phase === 'error' && state.message === dict.detail.notAvailable && (
               <span className="mt-3 inline-block rounded-full bg-[#f5d9d3] px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-[#a43d2b]">{dict.card.notAvailable}</span>
@@ -92,7 +92,7 @@ export default function ProductDetail({ product, addOns, whatsapp = '62812345678
 
           {Object.keys(product.specs ?? {}).length > 0 && (
             <div className="rounded-2xl border border-[#173b3b]/10 bg-white p-5">
-              <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">Specifications</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">{dict.detail.specifications}</p>
               <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
                 {Object.entries(product.specs).map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4 border-b border-[#173b3b]/8 pb-2 text-sm">
@@ -107,12 +107,12 @@ export default function ProductDetail({ product, addOns, whatsapp = '62812345678
           <div className="flex items-end gap-6">
             <div>
               <p className="text-3xl font-bold">{formatMoney(product.dailyCents)}</p>
-              <p className="text-xs text-[#173b3b]/50">per day</p>
+              <p className="text-xs text-[#173b3b]/50">{dict.card.perDay}</p>
             </div>
             {product.depositCents > 0 && (
               <div>
                 <p className="text-lg font-bold text-[#173b3b]/70">{formatMoney(product.depositCents)}</p>
-                <p className="text-xs text-[#173b3b]/50">refundable deposit</p>
+                <p className="text-xs text-[#173b3b]/50">{dict.detail.depositRefundable}</p>
               </div>
             )}
           </div>

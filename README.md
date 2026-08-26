@@ -159,8 +159,7 @@ a product's price later never mutates historical rentals.
   for the navbar. Migration `0009` adds `categories.show_in_nav`.
 - **SEO basics**: `app/sitemap.ts` emits static routes + every active, indexable
   product page; `app/robots.ts` allows the storefront and disallows
-  `/admin`, `/api`, `/d` and `/account`. Still open: per-product OG images and
-  a full a11y pass.
+  `/admin`, `/api`, `/d` and `/account`. Per-product OG/Twitter metadata is now generated per rental page
 - **Tracking (§41)**: provider abstraction + schema + admin enrollment UI are
   live; no real provider is connected yet, so every surface honestly reports
   "Tracking integration not configured" and no location data is collected.

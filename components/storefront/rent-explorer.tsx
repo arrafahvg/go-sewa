@@ -6,7 +6,8 @@ import { Search, SlidersHorizontal, X } from 'lucide-react'
 import ProductCard from '@/components/storefront/product-card'
 import { formatMoneyCompact } from '@/lib/utils/money'
 import type { CatalogProduct } from '@/lib/data/catalog'
-import type { Dictionary } from '@/lib/i18n/dictionaries'
+import type { Dictionary, Locale } from '@/lib/i18n/dictionaries'
+import { pick } from '@/lib/i18n/dictionaries'
 
 type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name'
 
@@ -49,6 +50,7 @@ export default function RentExplorer({
   initialCategory = '',
   initialSort = 'featured',
   dict,
+  locale,
 }: {
   products: CatalogProduct[]
   categories: CategoryOption[]
@@ -56,6 +58,7 @@ export default function RentExplorer({
   initialSort?: string
   /** Localized UI strings (§9) — passed from the server page. */
   dict: Dictionary
+  locale: Locale
 }) {
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
@@ -129,6 +132,7 @@ export default function RentExplorer({
       results={results}
       hasFilters={hasFilters}
       clearAll={clearAll}
+      locale={locale}
       dict={dict}
     />
   )
@@ -144,8 +148,9 @@ function RentExplorerView(props: {
   hasFilters: boolean
   clearAll: () => void
   dict: Dictionary
+  locale: Locale
 }) {
-  const { q, setQ, sort, setSort, category, setCategory, categories, priceKey, setPriceKey, depositFree, setDepositFree, results, hasFilters, clearAll, dict } = props
+  const { q, setQ, sort, setSort, category, setCategory, categories, priceKey, setPriceKey, depositFree, setDepositFree, results, hasFilters, clearAll, locale, dict } = props
 
   return (
     <div>
@@ -198,7 +203,7 @@ function RentExplorerView(props: {
               name={p.name}
               slug={p.slug}
               imageUrl={p.imageUrl}
-              category={p.categoryNameEn ?? dict.home.rentalCategoryFallback}
+              category={pick(locale, p.categoryNameEn ?? dict.home.rentalCategoryFallback, p.categoryNameId ?? p.categoryNameEn ?? dict.home.rentalCategoryFallback)}
               price={formatMoneyCompact(p.dailyCents)}
               deposit={p.depositCents}
               labels={{ perDay: dict.card.perDay, deposit: dict.card.deposit, notAvailable: dict.card.notAvailable }}

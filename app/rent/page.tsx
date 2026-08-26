@@ -39,6 +39,7 @@ export default async function RentPage({
             name: pick(locale, c.nameEn, c.nameId ?? c.nameEn),
           }))}
           initialCategory={category ?? ''}
+          locale={locale}
           dict={dict}
         />
       </div>
