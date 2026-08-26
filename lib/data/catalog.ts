@@ -1,6 +1,6 @@
 import { and, eq, asc, gt, lt, inArray, isNull } from 'drizzle-orm'
 import { db, dbRequest } from '@/lib/db'
-import { categories, products, rentalPricingRules, rentalAddOns, devices, bookings, bookingDeviceAllocations } from '@/lib/db/schema'
+import { categories, products, rentalPricingRules, rentalAddOns, devices, bookings, bookingDeviceAllocations, productCategories } from '@/lib/db/schema'
 import { getSettings } from '@/lib/services/settings'
 import { BLOCKING_BOOKING_STATUSES, UNBOOKABLE_DEVICE_STATUSES } from '@/lib/services/availability'
 
@@ -14,6 +14,8 @@ export type CatalogProduct = {
   categorySlug: string | null
   categoryNameId: string | null
   categoryNameEn: string | null
+  /** Every category slug the product belongs to: primary + additional (§5). */
+  categorySlugs: string[]
   depositCents: number
   depositRequired: boolean
   dailyCents: number
@@ -62,6 +64,9 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
       db.select().from(rentalPricingRules)
         .where(eq(rentalPricingRules.active, true))
         .orderBy(asc(rentalPricingRules.priority)),
+      db.select({ productId: productCategories.productId, slug: categories.slug })
+        .from(productCategories)
+        .innerJoin(categories, eq(categories.id, productCategories.categoryId)),
       // Stock snapshot inputs (batched — keeps the read pool-safe, §81).
       db.select({ id: devices.id, productId: devices.productId, status: devices.status }).from(devices).where(eq(devices.active, true)),
       db.select({ deviceId: bookingDeviceAllocations.deviceId })
@@ -74,7 +79,7 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
           inArray(bookings.status, BLOCKING_BOOKING_STATUSES),
         )),
     ]),
-  ).then(([rows, allCats, dailyRules, activeDevices, nowAllocs]) => {
+  ).then(([rows, allCats, dailyRules, extraCats, activeDevices, nowAllocs]) => {
     const catById = new Map(allCats.map((c) => [c.id, c]))
     const activeSlugs = new Set(allCats.filter((c) => c.active).map((c) => c.slug))
     // Lowest-priority active "daily" rule wins, matching the old per-product query.
@@ -95,6 +100,13 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
       if (!unbookable.has(d.status) && !nowHeld.has(d.id)) s.freeNow += 1
       stockByProduct.set(d.productId, s)
     }
+    // Additional category slugs per product (primary is added per-product below).
+    const extraByProduct = new Map<string, string[]>()
+    for (const r of extraCats) {
+      const list = extraByProduct.get(r.productId) ?? []
+      list.push(r.slug)
+      extraByProduct.set(r.productId, list)
+    }
     return rows.map((p) => {
       const cat = p.categoryId ? (catById.get(p.categoryId) ?? null) : null
       const c = cat && activeSlugs.has(cat.slug) ? cat : null
@@ -106,6 +118,7 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
         imageUrl: p.imageUrl ?? '',
         categoryId: p.categoryId,
         categorySlug: cat?.slug ?? null,
+        categorySlugs: [...new Set([cat?.slug, ...(extraByProduct.get(p.id) ?? [])].filter((s): s is string => !!s))],
         categoryNameId: c?.nameId ?? null,
         categoryNameEn: c?.nameEn ?? null,
         depositCents: p.depositCents,

@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import {
-  deviceTrackingConfigurations, deviceTrackingEvents,
+  deviceTrackingConfigurations, deviceTrackingEvents, productCategories,
 } from '@/lib/db/schema'
 import { isTrackingConfigured } from '@/lib/services/tracking'
 import { listCategoriesAdmin } from '@/lib/services/inventory'
@@ -38,6 +38,7 @@ export default async function InventoryPage() {
   const categories = categoryRows.map((c) => ({ id: c.id, slug: c.slug, nameId: c.nameId, nameEn: c.nameEn }))
 
   const configs = await db.select().from(deviceTrackingConfigurations)
+  const productCategoryRows = await db.select({ productId: productCategories.productId, categoryId: productCategories.categoryId }).from(productCategories)
   const events = await db.select().from(deviceTrackingEvents)
   const lastEventByDevice = new Map<string, Date>()
   for (const e of events) {
@@ -81,7 +82,7 @@ export default async function InventoryPage() {
         <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">
           <a href="/admin" className="hover:underline">Admin</a> / Inventory
         </p>
-        <InventoryManager products={products} rules={rules} devices={devices} trackingProviderConnected={trackingProviderConnected} tracking={tracking} categories={categories} />
+        <InventoryManager products={products} rules={rules} devices={devices} trackingProviderConnected={trackingProviderConnected} tracking={tracking} categories={categories} productCategoryRows={productCategoryRows} />
       </div>
     </div>
   )

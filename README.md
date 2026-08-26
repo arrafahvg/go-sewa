@@ -371,4 +371,16 @@ User-reported items, tracked here until fixed:
    **"Not available"** badges: the catalogue now carries a per-product stock
    snapshot (`stock.freeNow`), so products with no units yet — or with every unit
    currently rented — stay listed but are clearly labelled instead of vanishing.
+9. **Storefront category navigation did not update the filter** — clicking
+   *Cameras* in the navbar from `/rent?category=smartphones` changed the URL but
+   kept the old filter (the client island only seeded its state on first mount).
+   → The explorer now re-seeds from the incoming `?category=` prop and mirrors
+   chip clicks back into the URL (no server round-trip).
+10. **A product could only belong to one category.** → Added a
+   `product_categories` many-to-many table (migration `0010`): the existing
+   `category_id` stays the **primary/display** category, and the product form
+   gains an "Additional categories" picker. Storefront category filters match
+   the primary *or* any additional category; `deleteCategory` refuses while
+   either reference exists. Seed adds demo cross-assignments (GoPro/Insta360/
+   DJI RS 3 also under *Cameras*).
 

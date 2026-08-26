@@ -1,6 +1,6 @@
 import { asc, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { categories, products, devices, rentalPricingRules, type PricingRuleKind } from '@/lib/db/schema'
+import { categories, products, devices, rentalPricingRules, productCategories, type PricingRuleKind } from '@/lib/db/schema'
 import { logActivity, uid } from './audit'
 import type { DeviceStatus } from './devices'
 
@@ -37,6 +37,8 @@ export type ProductInput = {
   imageUrl?: string | null
   specs?: Record<string, string>
   gallery?: string[] | null
+  /** Additional (non-primary) category ids — many-to-many via product_categories (§5). */
+  additionalCategoryIds?: string[]
   active?: boolean
 }
 
@@ -45,6 +47,17 @@ function slugify(value: string): string {
 }
 
 // --- Categories ----------------------------------------------------------------
+
+/** Replace a product's additional (non-primary) category rows (§5). */
+async function setAdditionalCategories(productId: string, primaryId: string | null, additionalIds?: string[]) {
+  await db.delete(productCategories).where(eq(productCategories.productId, productId))
+  const ids = [...new Set((additionalIds ?? []).filter((cid) => cid && cid !== primaryId))]
+  if (ids.length) {
+    await db.insert(productCategories)
+      .values(ids.map((categoryId) => ({ productId, categoryId })))
+      .onConflictDoNothing()
+  }
+}
 
 /**
  * Category administration (§5/§42). `showInNav` controls whether a category
@@ -85,11 +98,23 @@ export async function createCategory(input: {
   // Optionally pull existing products into the new category in the same step.
   let productsAssigned = 0
   if (input.productIds?.length) {
-    const moved = await db.update(products)
-      .set({ categoryId: id })
+    const picked = await db
+      .select({ id: products.id, categoryId: products.categoryId })
+      .from(products)
       .where(inArray(products.id, input.productIds))
-      .returning({ id: products.id })
-    productsAssigned = moved.length
+    productsAssigned = picked.length
+    // Products without a primary category adopt the new one; the rest get it
+    // as an additional category (many-to-many, §5).
+    const noPrimary = picked.filter((p) => !p.categoryId).map((p) => p.id)
+    if (noPrimary.length) {
+      await db.update(products).set({ categoryId: id }).where(inArray(products.id, noPrimary))
+    }
+    const withPrimary = picked.filter((p) => p.categoryId).map((p) => p.id)
+    if (withPrimary.length) {
+      await db.insert(productCategories)
+        .values(withPrimary.map((productId) => ({ productId, categoryId: id })))
+        .onConflictDoNothing()
+    }
   }
   await logActivity({
     userId: byUserId, action: 'category_created', entity: 'category',
@@ -128,7 +153,8 @@ export async function updateCategory(id: string, patch: {
 /** Delete a category. Refuses while products still reference it — reassign them first. */
 export async function deleteCategory(id: string, byUserId?: string | null) {
   const inUse = await db.select({ id: products.id }).from(products).where(eq(products.categoryId, id)).limit(1)
-  if (inUse.length > 0) {
+  const linked = await db.select({ productId: productCategories.productId }).from(productCategories).where(eq(productCategories.categoryId, id)).limit(1)
+  if (inUse.length > 0 || linked.length > 0) {
     throw new Error('This category still has products assigned. Move them to another category first.')
   }
   const row = (await db.select().from(categories).where(eq(categories.id, id)).limit(1))[0]
@@ -164,6 +190,10 @@ export async function createProduct(input: ProductInput, byUserId?: string | nul
     gallery: input.gallery ?? [],
     active: input.active ?? true,
   })
+  if (input.additionalCategoryIds?.length) {
+    await setAdditionalCategories(id, input.categoryId ?? null, input.additionalCategoryIds)
+  }
+
   await logActivity({ userId: byUserId, action: 'product_created', entity: 'product', entityId: id, metadata: { slug } })
   return id
 }
@@ -184,8 +214,13 @@ export async function updateProduct(id: string, patch: Partial<ProductInput>, by
   if (patch.specs !== undefined) clean.specs = patch.specs
   if (patch.active !== undefined) clean.active = patch.active
 
-  const updated = await db.update(products).set(clean).where(eq(products.id, id)).returning({ id: products.id })
+  const updated = await db.update(products).set(clean).where(eq(products.id, id)).returning({ id: products.id, categoryId: products.categoryId })
   if (!updated.length) throw new Error('Product not found.')
+
+  if (patch.additionalCategoryIds !== undefined) {
+    const primaryId = (clean.categoryId as string | null | undefined) ?? updated[0].categoryId ?? null
+    await setAdditionalCategories(id, primaryId, patch.additionalCategoryIds)
+  }
 
   await logActivity({ userId: byUserId, action: 'product_updated', entity: 'product', entityId: id, metadata: { fields: Object.keys(clean).filter((k) => k !== 'updatedAt') } })
 }

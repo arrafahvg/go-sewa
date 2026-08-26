@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { db } from './index'
 import {
-  categories, products, rentalPricingRules, rentalAddOns,
+  categories, products, rentalPricingRules, rentalAddOns, productCategories,
   devices, deviceMaintenance, deviceDamageReports, customers, bookings, bookingItems,
   bookingDeviceAllocations, settings, cmsPages, faq, testimonials, leads,
   invoiceTemplates, agreementTemplates, invoices, rentalAgreements,
@@ -80,6 +80,13 @@ export async function seed(): Promise<void> {
     'Mirrorless full-frame untuk kualitas maksimal.')
   const gimbal = await prod('dji-rs-3-gimbal', 'DJI RS 3 Gimbal', 'accessories', 1_000_000, 90_000,
     'Gimbal stabilizer profesional untuk kamera mirrorless.')
+
+  // Demo many-to-many categories (§5): action/360 cams also live under Cameras.
+  await db.insert(productCategories).values([
+    { productId: gopro, categoryId: categorySlugToId['cameras'] },
+    { productId: insta, categoryId: categorySlugToId['cameras'] },
+    { productId: gimbal, categoryId: categorySlugToId['cameras'] },
+  ]).onConflictDoNothing()
 
   // Save top-level ids for the booking section.
   const deviceProductIds = { iphone15, gopro, insta, dji, iphone13, samsung, mirrorless, gimbal }

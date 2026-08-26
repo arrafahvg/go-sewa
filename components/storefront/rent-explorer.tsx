@@ -59,6 +59,22 @@ export default function RentExplorer({
 }) {
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
+
+  // Navbar/category links re-render this page with a new ?category= without
+  // remounting the client island — re-seed the filter from the prop (§44).
+  useEffect(() => {
+    setCategory(initialCategory)
+  }, [initialCategory])
+
+  // Keep the address bar in step with chip filtering (no server round-trip).
+  function selectCategory(next: string) {
+    setCategory(next)
+    if (typeof window === 'undefined') return
+    const url = new URL(window.location.href)
+    if (next) url.searchParams.set('category', next)
+    else url.searchParams.delete('category')
+    window.history.replaceState(null, '', url.toString())
+  }
   const [category, setCategory] = useState(initialCategory)
   const [priceKey, setPriceKey] = useState('any')
   const [depositFree, setDepositFree] = useState(false)
@@ -74,7 +90,7 @@ export default function RentExplorer({
     const term = debouncedQ.trim().toLowerCase()
     const price = PRICE_BANDS.find((b) => b.key === priceKey)
     const filtered = products.filter((p) => {
-      if (category && (p.categorySlug ?? '') !== category) return false
+      if (category && !(p.categorySlugs ?? []).includes(category)) return false
       if (price) {
         if (price.min !== undefined && p.dailyCents < price.min) return false
         if (price.max !== undefined && p.dailyCents > price.max) return false
@@ -120,7 +136,7 @@ export default function RentExplorer({
 function RentExplorerView(props: {
   q: string; setQ: Dispatch<SetStateAction<string>>
   sort: SortKey; setSort: Dispatch<SetStateAction<SortKey>>
-  category: string; setCategory: Dispatch<SetStateAction<string>>
+  category: string; setCategory: (next: string) => void
   categories: CategoryOption[]
   priceKey: string; setPriceKey: Dispatch<SetStateAction<string>>
   depositFree: boolean; setDepositFree: Dispatch<SetStateAction<boolean>>
@@ -157,7 +173,7 @@ function RentExplorerView(props: {
       </div>
 
       <FiltersRow
-        category={category} setCategory={setCategory} categories={categories}
+        category={category} setCategory={selectCategory} categories={categories}
         priceKey={priceKey} setPriceKey={setPriceKey}
         depositFree={depositFree} setDepositFree={setDepositFree}
         dict={dict}
@@ -196,7 +212,7 @@ function RentExplorerView(props: {
 }
 
 function FiltersRow({ category, setCategory, categories, priceKey, setPriceKey, depositFree, setDepositFree, dict }: {
-  category: string; setCategory: Dispatch<SetStateAction<string>>
+  category: string; setCategory: (next: string) => void
   categories: CategoryOption[]
   priceKey: string; setPriceKey: Dispatch<SetStateAction<string>>
   depositFree: boolean; setDepositFree: Dispatch<SetStateAction<boolean>>

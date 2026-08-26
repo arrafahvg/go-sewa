@@ -34,6 +34,7 @@ export async function saveProductAction(input: {
   defaultFulfillment?: string
   imageUrl?: string | null
   gallery?: string[] | null
+  additionalCategoryIds?: string[]
   active?: boolean
 }): Promise<Result> {
   const staff = await requireStaff()

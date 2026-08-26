@@ -1,5 +1,5 @@
 import {
-  pgTable, text, integer, boolean, timestamp, index, jsonb, pgEnum, doublePrecision,
+  pgTable, text, integer, boolean, timestamp, index, jsonb, pgEnum, doublePrecision, primaryKey,
 } from 'drizzle-orm/pg-core'
 
 export const deviceStatusEnum = pgEnum('device_status', [
@@ -48,6 +48,18 @@ export const categories = pgTable('categories', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
+/**
+ * Product ↔ Category many-to-many (§5). `products.category_id` remains the
+ * primary/display category; rows here are additional categories a product also
+ * belongs to. Storefront category filters match either.
+ */
+export const productCategories = pgTable('product_categories', {
+  productId: text('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  categoryId: text('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+}, (t) => [
+  primaryKey({ columns: [t.productId, t.categoryId] }),
+  index('product_categories_category_idx').on(t.categoryId),
+])
 export const products = pgTable('products', {
   id: text('id').primaryKey(),
   categoryId: text('category_id'),
