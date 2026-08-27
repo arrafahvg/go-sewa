@@ -15,6 +15,8 @@ import GenerateInvoiceButton from '@/components/admin/generate-invoice-button'
 import AgreementsPanel from '@/components/admin/agreements-panel'
 import IdentityDocumentsPanel from '@/components/admin/identity-documents-panel'
 import DepositPaymentPanel from '@/components/admin/deposit-payment-panel'
+import ExtensionsPanel from '@/components/admin/extensions-panel'
+import { listExtensions } from '@/lib/services/extensions'
 import { customerDocuments, depositTransactions } from '@/lib/db/schema'
 
 export const metadata: Metadata = { title: 'Booking detail — Go-Sewa Admin' }
@@ -47,6 +49,8 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
     ? await db.select().from(depositTransactions).where(eq(depositTransactions.depositId, deposit.id)).orderBy(desc(depositTransactions.createdAt))
     : []
   const paymentHistory = await getPaymentHistory(detail.booking.id)
+  const extensionRows = await listExtensions(detail.booking.id)
+  const EXTENDABLE = ['confirmed', 'payment_pending', 'partially_paid', 'paid', 'reserved', 'ready_for_pickup', 'out_for_delivery', 'active_rental', 'return_due', 'overdue']
   const paidRow = await db
     .select({ sum: sql<number>`coalesce(sum(${payments.amountCents}), 0)::int` })
     .from(payments).where(eq(payments.bookingId, detail.booking.id))
@@ -139,6 +143,19 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           />
           <AgreementsPanel bookingId={detail.booking.id} />
           <GenerateInvoiceButton bookingId={detail.booking.id} />
+          <ExtensionsPanel
+            bookingId={detail.booking.id}
+            currentEndsAt={detail.booking.endsAt.toISOString()}
+            extendable={(EXTENDABLE as string[]).includes(detail.booking.status)}
+            extensions={extensionRows.map((x) => ({
+              id: x.id,
+              previousEndsAt: x.previousEndsAt.toISOString(),
+              newEndsAt: x.newEndsAt.toISOString(),
+              additionalCents: x.additionalCents,
+              reason: x.reason,
+              createdAt: x.createdAt.toISOString(),
+            }))}
+          />
         </div>
       </main>
     </div>

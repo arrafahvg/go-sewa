@@ -401,4 +401,14 @@ User-reported items, tracked here until fixed:
     identically for ID and EN visitors. → Hero fields are now bilingual in the CMS
     (Indonesian defaults + optional English kicker/headline/sub/image-alt with
     graceful per-field fallback), edited at `/admin/content`.
+14. **Rental extensions (§29) were not implemented** — staff had no way to extend
+    a rental; the `booking_extensions` table sat unused. → Added the extension
+    flow: the booking-detail page now has an "Rental extensions" panel where
+    staff pick a new end date. The §6 availability engine re-checks the extra
+    window (excluding this booking's own allocations); conflicting requests are
+    refused with a customer-safe message ("already reserved for another
+    booking…") and nothing is mutated. Approved extensions move `endsAt`, append
+    the extra days × active daily rule to the booking total, record an audit
+    entry, and keep an in-panel history (`lib/services/extensions.ts`).
+
 
