@@ -259,8 +259,11 @@ a product's price later never mutates historical rentals.
 - Optional add-ons (§2C) are fully admin-manageable at `/admin/content/add-ons`
   (sidebar: Catalog → Add-ons): bilingual names, per-day or one-off per-rental
   pricing in Rupiah, Active/Inactive storefront visibility, safe delete while
-  unused, and per-product attachment via Inventory → Edit product → Optional
-  add-ons. All writes are staff-gated and audit-logged (`lib/services/addons.ts`).
+  unused, per-product attachment via Inventory → Edit product → Optional
+  add-ons, **and an add-on-side "Attached products" editor** (click the product
+  count on any add-on row to multi-select which products offer it — diffed so
+  other add-ons are untouched). All writes are staff-gated and audit-logged
+  (`lib/services/addons.ts`).
 - CMS (§42) is live in two admin screens:
   - `/admin/settings` — company profile (business name, **managed logo upload** to
     `/public/uploads/site/` via the storage provider + logo URL fallback, address,

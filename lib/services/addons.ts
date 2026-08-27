@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { products, rentalAddOns, productAddOns } from '@/lib/db/schema'
 import { uid, logActivity } from './audit'
@@ -110,6 +110,48 @@ export async function deleteAddOn(id: string, byUserId: string): Promise<void> {
     entity: 'rental_add_ons',
     entityId: id,
     metadata: { nameEn: rows[0]?.nameEn ?? id },
+  })
+}
+
+/** Product ids currently attached to an add-on (add-on-side editor pre-fill). */
+export async function listProductIdsForAddOn(addOnId: string): Promise<string[]> {
+  const rows = await db
+    .select({ productId: productAddOns.productId })
+    .from(productAddOns)
+    .where(eq(productAddOns.addOnId, addOnId))
+  return rows.map((r) => r.productId)
+}
+
+/**
+ * Sync which products attach a given add-on — diffed, so other add-ons on those
+ * products are untouched (unlike the replace-all product-side sync).
+ */
+export async function setAddOnProducts(addOnId: string, productIds: string[], byUserId: string): Promise<void> {
+  const ids = [...new Set(productIds.filter(Boolean))]
+  if (ids.length) {
+    const known = await db.select({ id: products.id }).from(products).where(inArray(products.id, ids))
+    if (known.length !== ids.length) throw new Error('One or more selected products no longer exist.')
+  }
+  const current = await db
+    .select({ productId: productAddOns.productId })
+    .from(productAddOns)
+    .where(eq(productAddOns.addOnId, addOnId))
+  const currentIds = new Set(current.map((r) => r.productId))
+  const toAdd = ids.filter((id) => !currentIds.has(id))
+  const toRemove = [...currentIds].filter((id) => !ids.includes(id))
+
+  if (toAdd.length) {
+    await db.insert(productAddOns).values(toAdd.map((productId) => ({ productId, addOnId }))).onConflictDoNothing()
+  }
+  for (const productId of toRemove) {
+    await db.delete(productAddOns).where(and(eq(productAddOns.productId, productId), eq(productAddOns.addOnId, addOnId)))
+  }
+  await logActivity({
+    userId: byUserId,
+    action: 'addon_products_set',
+    entity: 'rental_add_ons',
+    entityId: addOnId,
+    metadata: { attached: ids.length, added: toAdd.length, removed: toRemove.length },
   })
 }
 

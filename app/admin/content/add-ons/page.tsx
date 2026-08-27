@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import AddOnManager from '@/components/admin/addon-manager'
 import { getCurrentUser } from '@/lib/services/auth'
 import { listAddOns } from '@/lib/services/addons'
+import { listProducts } from '@/lib/services/inventory'
 import { db } from '@/lib/db'
 import { productAddOns } from '@/lib/db/schema'
 
@@ -18,9 +19,10 @@ export default async function AddOnsPage() {
   const current = await getCurrentUser()
   if (!current) redirect('/sign-in')
 
-  const [addOns, attachRows] = await Promise.all([
+  const [addOns, attachRows, productRows] = await Promise.all([
     listAddOns(),
-    db.select({ addOnId: productAddOns.addOnId }).from(productAddOns),
+    db.select({ addOnId: productAddOns.addOnId, productId: productAddOns.productId }).from(productAddOns),
+    listProducts(),
   ])
   const counts = new Map<string, number>()
   for (const r of attachRows) counts.set(r.addOnId, (counts.get(r.addOnId) ?? 0) + 1)
@@ -49,6 +51,8 @@ export default async function AddOnsPage() {
               active: a.active,
               productCount: counts.get(a.id) ?? 0,
             }))}
+            products={productRows.map((p) => ({ id: p.id, name: p.name }))}
+            attachRows={attachRows}
           />
         </div>
       </div>

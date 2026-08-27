@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { requireStaff } from '@/lib/services/auth'
 import {
-  createAddOn, deleteAddOn, listAddOnIdsForProduct, setProductAddOns, updateAddOn,
+  createAddOn, deleteAddOn, listAddOnIdsForProduct, listProductIdsForAddOn,
+  setProductAddOns, setAddOnProducts, updateAddOn,
   type AddOnInput,
 } from '@/lib/services/addons'
 
@@ -65,6 +66,32 @@ export async function listProductAddOnIdsAction(productId: string): Promise<stri
     return []
   }
 }
+
+/** Read which product ids attach an add-on (add-on-side editor pre-fill). */
+export async function listAddOnProductIdsAction(addOnId: string): Promise<string[]> {
+  const staff = await requireStaff()
+  if (!staff) return []
+  try {
+    return await listProductIdsForAddOn(addOnId)
+  } catch {
+    return []
+  }
+}
+
+/** Sync which products attach an add-on — diffed; other add-ons are untouched. */
+export async function setAddOnProductsAction(addOnId: string, productIds: string[]): Promise<Result> {
+  const staff = await requireStaff()
+  if (!staff) return { ok: false, error: 'You need staff permissions to manage add-ons.' }
+  try {
+    await setAddOnProducts(addOnId, productIds, staff.id)
+    revalidatePath('/admin/content/add-ons')
+    revalidatePath('/', 'layout')
+    return { ok: true }
+  } catch (e) {
+    return fail(e)
+  }
+}
+
 
 /** Replace the add-ons attached to a product (replace-all semantics). */
 export async function setProductAddOnsAction(productId: string, addOnIds: string[]): Promise<Result> {

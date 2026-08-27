@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Plus, Trash2 } from 'lucide-react'
 import {
   createAddOnAction,
   deleteAddOnAction,
+  listAddOnProductIdsAction,
+  setAddOnProductsAction,
   updateAddOnAction,
 } from '@/app/actions/addons'
 import { rupiahToCents, formatMoney } from '@/lib/utils/money'
@@ -28,7 +30,7 @@ const selectCls = 'rounded-lg border border-[#173b3b]/15 bg-white px-2.5 py-1.5 
  * per-day or per-rental pricing, toggle availability, and safely delete unused
  * ones. All writes go through staff-gated, audit-logged server actions.
  */
-export default function AddOnManager({ addOns }: { addOns: AddOnRow[] }) {
+export default function AddOnManager({ addOns, products, attachRows }: { addOns: AddOnRow[]; products: { id: string; name: string }[]; attachRows: { addOnId: string; productId: string }[] }) {
   const router = useRouter()
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -40,6 +42,9 @@ export default function AddOnManager({ addOns }: { addOns: AddOnRow[] }) {
   const [newRupiah, setNewRupiah] = useState('')
   // Draft edits for the row being edited.
   const [draft, setDraft] = useState<{ nameId: string; nameEn: string; centsPerDay: number; centsPerRental: number; active: boolean } | null>(null)
+  // Attached-products editor state (add-on side): which row is open + its draft selection.
+  const [attachOpenId, setAttachOpenId] = useState<string | null>(null)
+  const [attachDraft, setAttachDraft] = useState<string[]>([])
 
   async function run(fn: () => Promise<{ ok: boolean; error?: string }>, okMessage: string, busyKey?: string) {
     setBusyId(busyKey ?? 'form'); setError(''); setSuccess('')
@@ -92,6 +97,29 @@ export default function AddOnManager({ addOns }: { addOns: AddOnRow[] }) {
   async function remove(row: AddOnRow) {
     if (!confirm(`Delete add-on “${row.nameEn}”? This cannot be undone.`)) return
     await run(() => deleteAddOnAction(row.id), 'Add-on deleted.', row.id)
+  }
+
+  async function openAttach(row: AddOnRow) {
+    if (attachOpenId === row.id) { setAttachOpenId(null); return }
+    setBusyId(row.id)
+    const ids = await listAddOnProductIdsAction(row.id)
+    setBusyId(null)
+    setAttachDraft(ids)
+    setAttachOpenId(row.id)
+    setSuccess(''); setError('')
+  }
+
+  function toggleAttachProduct(id: string) {
+    setAttachDraft((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
+  }
+
+  async function saveAttach(addOnId: string) {
+    const ok = await run(
+      () => setAddOnProductsAction(addOnId, attachDraft),
+      attachDraft.length > 0 ? `Attached to ${attachDraft.length} product${attachDraft.length === 1 ? '' : 's'}.` : 'Detached from all products.',
+      addOnId,
+    )
+    if (ok) { setAttachOpenId(null); setAttachDraft([]) }
   }
 
   return (
@@ -180,14 +208,26 @@ export default function AddOnManager({ addOns }: { addOns: AddOnRow[] }) {
               </tr>
 
             ) : (
-              <tr key={row.id} className="border-b border-[#173b3b]/8">
+              <Fragment key={row.id}>
+              <tr className="border-b border-[#173b3b]/8">
                 <td className="px-4 py-3">
                   <p className="font-semibold">{row.nameEn}</p>
                   <p className="text-xs text-[#173b3b]/50">{row.nameId}</p>
                 </td>
                 <td className="px-4 py-3">{formatMoney(row.centsPerDay)}</td>
                 <td className="px-4 py-3">{formatMoney(row.centsPerRental)}</td>
-                <td className="px-4 py-3">{row.productCount}</td>
+                <td className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => openAttach(row)}
+                    disabled={busyId === row.id}
+                    className="flex items-center gap-1.5 rounded-full border border-[#173b3b]/15 px-3 py-1.5 text-xs font-bold hover:bg-[#faf8f2] disabled:opacity-60"
+                    aria-label={`Edit products attached to ${row.nameEn}`}
+                  >
+                    {(attachRows.filter((r) => r.addOnId === row.id)).length}
+                    <span className="font-normal text-[#173b3b]/50">product{(attachRows.filter((r) => r.addOnId === row.id)).length === 1 ? '' : 's'} · edit</span>
+                  </button>
+                </td>
                 <td className="px-4 py-3">
                   <select
                     value={row.active ? 'active' : 'inactive'}
@@ -215,6 +255,41 @@ export default function AddOnManager({ addOns }: { addOns: AddOnRow[] }) {
                   </div>
                 </td>
               </tr>
+
+              {attachOpenId === row.id && (
+                <tr className="border-b border-[#173b3b]/8 bg-[#faf8f2]">
+                  <td colSpan={6} className="px-4 py-4">
+                    <p className="text-xs font-bold text-[#173b3b]/70">
+                      Products offering “{row.nameEn}”
+                      {attachDraft.length > 0 && (
+                        <span className="ml-2 rounded-full bg-[#e76f51] px-2 py-0.5 text-[10px] font-bold text-white">{attachDraft.length} selected</span>
+                      )}
+                    </p>
+                    {products.length === 0 ? (
+                      <p className="mt-2 text-xs text-[#173b3b]/50">No products exist yet — create products in Inventory first.</p>
+                    ) : (
+                      <div className="mt-2 grid max-h-56 gap-1.5 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
+                        {products.map((p) => (
+                          <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-[#173b3b]/80">
+                            <input type="checkbox" checked={attachDraft.includes(p.id)} onChange={() => toggleAttachProduct(p.id)} className="h-3.5 w-3.5 accent-[#e76f51]" />
+                            {p.name}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-3 flex items-center justify-between">
+                      <p className="text-[11px] text-[#173b3b]/45">Changes apply on save; add-ons other products attach are never affected.</p>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setAttachOpenId(null)} className="rounded-full border border-[#173b3b]/15 px-4 py-1.5 text-xs font-bold">Cancel</button>
+                        <button type="button" onClick={() => saveAttach(row.id)} disabled={busyId === row.id} className="flex items-center gap-1.5 rounded-full bg-[#173b3b] px-4 py-1.5 text-xs font-bold text-white disabled:opacity-60">
+                          {busyId === row.id && <Loader2 size={13} className="animate-spin" />} Save attachments
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              </Fragment>
 
             ))}
           </tbody>
