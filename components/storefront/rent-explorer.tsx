@@ -184,7 +184,7 @@ function RentExplorerView(props: {
         dict={dict}
       />
 
-      <p className="mt-4 text-xs text-[#173b3b]/55">
+      <p aria-live="polite" className="mt-4 text-xs text-[#173b3b]/55">
         {results.length === 1
           ? dict.rent.oneDevice
           : (hasFilters ? dict.rent.devicesMatching : dict.rent.devicesInLineup).replace('{count}', String(results.length))}

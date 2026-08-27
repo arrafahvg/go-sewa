@@ -70,6 +70,7 @@ export default function ProductDetail({ product, addOns, categoryLabel, whatsapp
                   key={`${url}-${i}`}
                   onClick={() => setActiveImage(i)}
                   aria-label={`Show photo ${i + 1} of ${product.name}`}
+                  aria-pressed={i === activeImage}
                   className={`h-16 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition ${i === activeImage ? 'border-[#e76f51]' : 'border-transparent opacity-70 hover:opacity-100'}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -127,7 +128,11 @@ export default function ProductDetail({ product, addOns, categoryLabel, whatsapp
           </div>
           <p className="flex items-center gap-2 text-xs text-[#173b3b]/55"><CalendarDays size={14} /> {days} rental days</p>
 
-          <div className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${state.phase === 'ok' ? 'border-[#8bc0a8] bg-[#e4eee8] text-[#27604a]' : state.phase === 'error' ? 'border-[#e8a09a] bg-[#f5d9d3] text-[#a43d2b]' : 'border-[#173b3b]/15 bg-white text-[#173b3b]/55'}`}>
+          <div
+            role="status"
+            aria-live="polite"
+            className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${state.phase === 'ok' ? 'border-[#8bc0a8] bg-[#e4eee8] text-[#27604a]' : state.phase === 'error' ? 'border-[#e8a09a] bg-[#f5d9d3] text-[#a43d2b]' : 'border-[#173b3b]/15 bg-white text-[#173b3b]/55'}`}
+          >
             <div className="flex items-center gap-2">
               {state.phase === 'loading' && <Loader2 size={15} className="animate-spin" />}
               {state.phase === 'ok' && <Check size={15} />}
@@ -147,7 +152,7 @@ export default function ProductDetail({ product, addOns, categoryLabel, whatsapp
               <p className="text-xs font-bold text-[#173b3b]/55">{dict.detail.addOnsTitle}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {addOns.map((a) => (
-                  <button key={a.id} onClick={() => toggleAddOn(a.id)} className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${selectedAddOns.includes(a.id) ? 'border-[#173b3b] bg-[#173b3b] text-white' : 'border-[#173b3b]/15 bg-white text-[#173b3b]/70'}`}>
+                  <button key={a.id} onClick={() => toggleAddOn(a.id)} aria-pressed={selectedAddOns.includes(a.id)} className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${selectedAddOns.includes(a.id) ? 'border-[#173b3b] bg-[#173b3b] text-white' : 'border-[#173b3b]/15 bg-white text-[#173b3b]/70'}`}>
                     {a.nameEn} · {formatMoney(a.centsPerDay)}{dict.detail.perDayShort}
                   </button>
                 ))}

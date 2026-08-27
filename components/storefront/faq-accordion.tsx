@@ -17,11 +17,16 @@ export default function FaqAccordion({ items }: { items: CmsFaq[] }) {
               onClick={() => setOpen(isOpen ? null : f.id)}
               className="flex w-full items-center justify-between gap-4 py-5 text-left"
               aria-expanded={isOpen}
+              aria-controls={`faq-answer-${f.id}`}
             >
               <span className="font-semibold text-[#173b3b]">{f.question}</span>
               <ChevronDown size={18} className={`shrink-0 text-[#173b3b]/50 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
-            {isOpen && <p className="pb-5 text-sm leading-6 text-[#173b3b]/65">{f.answer}</p>}
+            {isOpen && (
+              <p id={`faq-answer-${f.id}`} className="pb-5 text-sm leading-6 text-[#173b3b]/65">
+                {f.answer}
+              </p>
+            )}
           </div>
         )
       })}

@@ -101,6 +101,7 @@ export default function StorefrontShell({
               onClick={() => setMenuOpen((v) => !v)}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-[#173b3b]/10 bg-white md:hidden"
               aria-label={dict.shell.menuAria}
+              aria-expanded={menuOpen}
             >
               {menuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
@@ -122,7 +123,7 @@ export default function StorefrontShell({
         )}
       </header>
 
-      <main>{children}</main>
+      <main id="main-content">{children}</main>
 
       <footer className="border-t border-[#173b3b]/10 bg-[#e4eee8] px-5 py-12 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-8 sm:flex-row sm:items-end">

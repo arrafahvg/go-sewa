@@ -173,11 +173,11 @@ if (status === 'done' && confirmed) {
                 <div className="border-t border-[#173b3b]/10 pt-4">
                   <p className="text-xs font-bold text-[#173b3b]/55">{dict.checkout.pickupOrDelivery}</p>
                   <div className="mt-3 grid grid-cols-2 gap-3">
-                    <button type="button" onClick={() => setFulfillment('pickup')} className={`rounded-xl border-2 px-4 py-3 text-left transition ${fulfillment === 'pickup' ? 'border-[#e76f51] bg-[#fff4f0]' : 'border-[#173b3b]/12 bg-[#f7f5ef] hover:border-[#173b3b]/25'}`}>
+                    <button type="button" onClick={() => setFulfillment('pickup')} aria-pressed={fulfillment === 'pickup'} className={`rounded-xl border-2 px-4 py-3 text-left transition ${fulfillment === 'pickup' ? 'border-[#e76f51] bg-[#fff4f0]' : 'border-[#173b3b]/12 bg-[#f7f5ef] hover:border-[#173b3b]/25'}`}>
                       <span className="block text-sm font-bold">{dict.checkout.pickup}</span>
                       <span className="block text-xs text-[#173b3b]/55">{dict.checkout.pickupNote}</span>
                     </button>
-                    <button type="button" onClick={() => setFulfillment('delivery')} className={`rounded-xl border-2 px-4 py-3 text-left transition ${fulfillment === 'delivery' ? 'border-[#e76f51] bg-[#fff4f0]' : 'border-[#173b3b]/12 bg-[#f7f5ef] hover:border-[#173b3b]/25'}`}>
+                    <button type="button" onClick={() => setFulfillment('delivery')} aria-pressed={fulfillment === 'delivery'} className={`rounded-xl border-2 px-4 py-3 text-left transition ${fulfillment === 'delivery' ? 'border-[#e76f51] bg-[#fff4f0]' : 'border-[#173b3b]/12 bg-[#f7f5ef] hover:border-[#173b3b]/25'}`}>
                       <span className="block text-sm font-bold">{dict.checkout.delivery}</span>
                       <span className="block text-xs text-[#173b3b]/55">{deliveryFeeCents > 0 ? dict.checkout.perBooking.replace('{fee}', formatMoney(deliveryFeeCents)) : dict.checkout.free}</span>
                     </button>
@@ -224,7 +224,11 @@ if (status === 'done' && confirmed) {
                   <div className="flex justify-between border-t border-[#173b3b]/10 pt-2"><span className="font-bold">{dict.checkout.totalDue}</span><span className="font-bold">{formatMoney(totals.due)}</span></div>
                 </div>
 
-                {error && <p className="text-sm font-semibold text-[#a43d2b]">{error}</p>}
+                {error && (
+                  <p role="alert" className="text-sm font-semibold text-[#a43d2b]">
+                    {error}
+                  </p>
+                )}
 
                 <button onClick={submit} disabled={status === 'submitting'} className="flex w-full items-center justify-center gap-2 rounded-full bg-[#173b3b] py-4 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50">
                   {status === 'submitting' && <Loader2 size={16} className="animate-spin" />}

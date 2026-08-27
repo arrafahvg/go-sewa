@@ -382,4 +382,10 @@ User-reported items, tracked here until fixed:
    the primary *or* any additional category; `deleteCategory` refuses while
    either reference exists. Seed adds demo cross-assignments (GoPro/Insta360/
    DJI RS 3 also under *Cameras*).
+11. **Accessibility pass** — closed: global visible `:focus-visible` ring, a
+    skip-to-content link plus `#main-content` landmark, `aria-expanded` on the
+    mobile menu & FAQ, `aria-controls` on FAQ items, `aria-pressed` on
+    toggle-style controls (fulfillment picker, add-ons, gallery thumbs),
+    `aria-live` announcement of catalogue result counts and the availability
+    status box (`role="status"`), and `role="alert"` on checkout errors.
 
