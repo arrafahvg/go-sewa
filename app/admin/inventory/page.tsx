@@ -1,8 +1,9 @@
 import { db } from '@/lib/db'
 import {
-  deviceTrackingConfigurations, deviceTrackingEvents, productCategories,
+  deviceTrackingConfigurations, deviceTrackingEvents, productCategories, productAddOns,
 } from '@/lib/db/schema'
 import { isTrackingConfigured } from '@/lib/services/tracking'
+import { listAddOns } from '@/lib/services/addons'
 import { listCategoriesAdmin } from '@/lib/services/inventory'
 import type { Metadata } from 'next'
 import InventoryManager from '@/components/admin/inventory'
@@ -27,18 +28,20 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function InventoryPage() {
-  const [productRows, ruleRows, devices, trackingProviderConnected, categoryRows] = await Promise.all([
+  const [productRows, ruleRows, devices, trackingProviderConnected, categoryRows, addOnRows] = await Promise.all([
     listProducts(),
     listPricingRules(),
     getAdminDevices(),
     isTrackingConfigured(),
     listCategoriesAdmin(),
+    listAddOns(),
   ])
 
   const categories = categoryRows.map((c) => ({ id: c.id, slug: c.slug, nameId: c.nameId, nameEn: c.nameEn }))
 
   const configs = await db.select().from(deviceTrackingConfigurations)
   const productCategoryRows = await db.select({ productId: productCategories.productId, categoryId: productCategories.categoryId }).from(productCategories)
+  const productAddOnRows = await db.select({ productId: productAddOns.productId, addOnId: productAddOns.addOnId }).from(productAddOns)
   const events = await db.select().from(deviceTrackingEvents)
   const lastEventByDevice = new Map<string, Date>()
   for (const e of events) {
@@ -76,13 +79,15 @@ export default async function InventoryPage() {
     priority: r.priority,
   }))
 
+  const addOns = addOnRows.filter((a) => a.active).map((a) => ({ id: a.id, nameId: a.nameId, nameEn: a.nameEn, centsPerDay: a.centsPerDay, centsPerRental: a.centsPerRental }))
+
   return (
     <div className="min-h-screen bg-[#f4f1ea] px-4 py-8 text-[#173b3b] sm:px-6 xl:px-10">
       <div>
         <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">
           <a href="/admin" className="hover:underline">Admin</a> / Inventory
         </p>
-        <InventoryManager products={products} rules={rules} devices={devices} trackingProviderConnected={trackingProviderConnected} tracking={tracking} categories={categories} productCategoryRows={productCategoryRows} />
+        <InventoryManager products={products} rules={rules} devices={devices} trackingProviderConnected={trackingProviderConnected} tracking={tracking} categories={categories} productCategoryRows={productCategoryRows} addOns={addOns} productAddOnRows={productAddOnRows} />
       </div>
     </div>
   )

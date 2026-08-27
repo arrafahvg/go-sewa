@@ -256,6 +256,11 @@ a product's price later never mutates historical rentals.
   server-loaded catalog in-memory (single fetch, no redundant queries). Gallery +
   specs (§11) are live on `/rent/[slug]` — thumbnail gallery over `products.gallery`
   and a structured spec table from `products.specs`.
+- Optional add-ons (§2C) are fully admin-manageable at `/admin/content/add-ons`
+  (sidebar: Catalog → Add-ons): bilingual names, per-day or one-off per-rental
+  pricing in Rupiah, Active/Inactive storefront visibility, safe delete while
+  unused, and per-product attachment via Inventory → Edit product → Optional
+  add-ons. All writes are staff-gated and audit-logged (`lib/services/addons.ts`).
 - CMS (§42) is live in two admin screens:
   - `/admin/settings` — company profile (business name, **managed logo upload** to
     `/public/uploads/site/` via the storage provider + logo URL fallback, address,
@@ -388,4 +393,12 @@ User-reported items, tracked here until fixed:
     toggle-style controls (fulfillment picker, add-ons, gallery thumbs),
     `aria-live` announcement of catalogue result counts and the availability
     status box (`role="status"`), and `role="alert"` on checkout errors.
+12. **Add-on management** — optional add-ons existed only in the schema/seed;
+    staff could not create, price, rename, hide or attach them. → Added the
+    add-ons service + actions (audit-logged) and `/admin/content/add-ons` UI,
+    plus an "Optional add-ons" picker in the product form.
+13. **Homepage hero was single-language** — the admin-editable hero copy rendered
+    identically for ID and EN visitors. → Hero fields are now bilingual in the CMS
+    (Indonesian defaults + optional English kicker/headline/sub/image-alt with
+    graceful per-field fallback), edited at `/admin/content`.
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, Package, Users, UserPlus, Wrench, ReceiptText,
+  LayoutDashboard, Package, PackagePlus, Users, UserPlus, Wrench, ReceiptText,
   FileText, Settings, UserRound, ExternalLink, ChevronLeft, ChevronRight, Menu, Store, FileSignature, UsersRound,
 } from 'lucide-react'
 
@@ -71,6 +71,7 @@ const GROUPS: Group[] = [
     items: [
       { label: 'Inventory', href: '/admin/inventory', icon: Package },
       { label: 'Categories', href: '/admin/content/categories', icon: FileText },
+      { label: 'Add-ons', href: '/admin/content/add-ons', icon: PackagePlus },
     ],
   },
   {

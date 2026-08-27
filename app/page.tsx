@@ -36,12 +36,12 @@ export default async function Home() {
       <section className="mx-auto max-w-7xl px-5 pb-20 pt-14 lg:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="max-w-3xl">
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{hero?.kicker ?? dict.home.heroKicker}</p>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#e76f51]">{pick(locale, hero?.kickerEn || hero?.kicker, hero?.kicker) ?? dict.home.heroKicker}</p>
             <h1 className="mt-4 font-serif text-5xl leading-tight tracking-tight sm:text-6xl lg:text-7xl">
-              {hero?.headline ?? dict.home.heroHeadline}
+              {pick(locale, hero?.headlineEn || hero?.headline, hero?.headline) ?? dict.home.heroHeadline}
             </h1>
             <p className="mt-6 max-w-xl text-base leading-7 text-[#173b3b]/65">
-              {hero?.sub ?? dict.home.heroSub}
+              {pick(locale, hero?.subEn || hero?.sub, hero?.sub) ?? dict.home.heroSub}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a href="/rent" className="rounded-full bg-[#173b3b] px-7 py-4 text-sm font-bold text-white transition hover:opacity-90">{dict.home.browseDevices}</a>
@@ -52,7 +52,7 @@ export default async function Home() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={hero?.imageUrl || '/hero-placeholder.svg'}
-                alt={hero?.imageAlt || 'Rental camera gear available at Go-Sewa'}
+                alt={pick(locale, hero?.imageAltEn || hero?.imageAlt, hero?.imageAlt) || 'Rental camera gear available at Go-Sewa'}
                 className="aspect-[4/3] w-full object-cover"
                 fetchPriority="high"
               />

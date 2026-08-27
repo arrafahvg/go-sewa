@@ -10,6 +10,7 @@ import type { PricingRuleKind } from '@/lib/db/schema'
 import type { DeviceStatus } from '@/lib/services/devices'
 import { storageProvider } from '@/lib/services/storage'
 import { logActivity, uid } from '@/lib/services/audit'
+import { setProductAddOns } from '@/lib/services/addons'
 
 /**
  * Inventory admin server actions (§54, §59, §63). Every action re-checks the
@@ -35,15 +36,22 @@ export async function saveProductAction(input: {
   imageUrl?: string | null
   gallery?: string[] | null
   additionalCategoryIds?: string[]
+  /** Optional add-ons attached to this product — synced via setProductAddOns when present. */
+  addOnIds?: string[]
   active?: boolean
 }): Promise<Result> {
   const staff = await requireStaff()
   if (!staff) return { ok: false, error: 'You need staff permissions to manage inventory.' }
   try {
+    let productId = input.id
     if (input.id) {
       await updateProduct(input.id, input, staff.id)
     } else {
-      await createProduct({ ...input, slug: input.slug ?? '' }, staff.id)
+      productId = await createProduct({ ...input, slug: input.slug ?? '' }, staff.id)
+    }
+    // Sync per-product add-ons only when the form sent an explicit list.
+    if (productId && input.addOnIds) {
+      await setProductAddOns(productId, input.addOnIds, staff.id)
     }
     return { ok: true }
   } catch (e) {

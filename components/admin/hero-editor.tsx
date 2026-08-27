@@ -15,8 +15,12 @@ export default function HeroEditor({ sections }: { sections: HomeSection[] }) {
     kicker: hero.kicker,
     headline: hero.headline,
     sub: hero.sub,
+    kickerEn: hero.kickerEn ?? '',
+    headlineEn: hero.headlineEn ?? '',
+    subEn: hero.subEn ?? '',
     imageUrl: hero.imageUrl ?? '',
     imageAlt: hero.imageAlt ?? '',
+    imageAltEn: hero.imageAltEn ?? '',
   })
   const [state, setState] = useState<{ phase: 'idle' | 'loading' | 'ok' | 'error'; message?: string }>({ phase: 'idle' })
   const fileRef = useRef<HTMLInputElement>(null)
@@ -60,17 +64,35 @@ export default function HeroEditor({ sections }: { sections: HomeSection[] }) {
       <p className="mt-1 text-xs text-[#173b3b]/55">Edits the headline block and image shown at the top of the storefront home page. Until an image is uploaded, a bundled placeholder is shown.</p>
       <div className="mt-4 grid gap-4">
         <label className="block text-sm font-semibold">
-          Kicker / eyebrow
+          Kicker / eyebrow (Indonesian)
           <input className={inputCls} value={form.kicker} onChange={(e) => setForm((f) => ({ ...f, kicker: e.target.value }))} />
         </label>
         <label className="block text-sm font-semibold">
-          Headline
+          Headline (Indonesian)
           <input className={inputCls} value={form.headline} onChange={(e) => setForm((f) => ({ ...f, headline: e.target.value }))} />
         </label>
         <label className="block text-sm font-semibold">
-          Sub-text
+          Sub-text (Indonesian)
           <textarea rows={3} className={inputCls} value={form.sub} onChange={(e) => setForm((f) => ({ ...f, sub: e.target.value }))} />
         </label>
+        <div className="rounded-xl border border-[#173b3b]/10 bg-[#faf8f2] p-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">English version — optional</p>
+          <p className="mt-1 text-xs font-normal text-[#173b3b]/50">Shown when a visitor uses the EN switch. Any field left blank falls back to the Indonesian text above.</p>
+          <div className="mt-3 grid gap-4">
+            <label className="block text-sm font-semibold">
+              Kicker / eyebrow (English)
+              <input className={inputCls} value={form.kickerEn} onChange={(e) => setForm((f) => ({ ...f, kickerEn: e.target.value }))} placeholder="Leave blank to reuse the Indonesian text" />
+            </label>
+            <label className="block text-sm font-semibold">
+              Headline (English)
+              <input className={inputCls} value={form.headlineEn} onChange={(e) => setForm((f) => ({ ...f, headlineEn: e.target.value }))} placeholder="Leave blank to reuse the Indonesian text" />
+            </label>
+            <label className="block text-sm font-semibold">
+              Sub-text (English)
+              <textarea rows={3} className={inputCls} value={form.subEn} onChange={(e) => setForm((f) => ({ ...f, subEn: e.target.value }))} placeholder="Leave blank to reuse the Indonesian text" />
+            </label>
+          </div>
+        </div>
         <div className="block text-sm font-semibold">
           Hero image
           <div className="mt-3 flex flex-wrap items-center gap-4">
@@ -95,8 +117,12 @@ export default function HeroEditor({ sections }: { sections: HomeSection[] }) {
             <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={onFile} />
           </div>
           <label className="mt-3 block text-sm font-semibold">
-            Image alt text (accessibility / SEO)
+            Image alt text (Indonesian — accessibility / SEO)
             <input className={inputCls} value={form.imageAlt} onChange={(e) => setForm((f) => ({ ...f, imageAlt: e.target.value }))} placeholder="e.g. Creator filming with a rented camera in Bali" />
+          </label>
+          <label className="mt-3 block text-sm font-semibold">
+            Image alt text (English)
+            <input className={inputCls} value={form.imageAltEn} onChange={(e) => setForm((f) => ({ ...f, imageAltEn: e.target.value }))} placeholder="Leave blank to reuse the Indonesian alt text" />
           </label>
         </div>
       </div>

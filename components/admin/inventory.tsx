@@ -38,6 +38,7 @@ export type AdminPricingRule = {
   priority: number
 }
 export type AdminCategory = { id: string; slug: string; nameId: string; nameEn: string }
+export type AdminAddOn = { id: string; nameId: string; nameEn: string; centsPerDay: number; centsPerRental: number }
 
 const inputCls = 'mt-1 w-full rounded-lg border border-[#173b3b]/15 bg-white px-3 py-2 text-sm outline-none focus:border-[#387066]'
 const RULE_KINDS: PricingRuleKind[] = ['daily', 'weekly', 'monthly', 'weekend', 'seasonal', 'promo', 'custom']
@@ -48,7 +49,7 @@ function Notice({ error, success }: { error?: string | null; success?: string | 
 }
 
 export default function InventoryManager({
-  products, rules, devices, trackingProviderConnected, tracking, categories, productCategoryRows,
+  products, rules, devices, trackingProviderConnected, tracking, categories, productCategoryRows, addOns, productAddOnRows,
 }: {
   products: AdminProductView[]
   rules: AdminPricingRule[]
@@ -57,6 +58,8 @@ export default function InventoryManager({
   tracking: TrackingView[]
   categories: AdminCategory[]
   productCategoryRows: { productId: string; categoryId: string }[]
+  addOns: AdminAddOn[]
+  productAddOnRows: { productId: string; addOnId: string }[]
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<'products' | 'devices'>('products')
@@ -79,7 +82,7 @@ export default function InventoryManager({
       </div>
 
       {tab === 'products'
-        ? <ProductsPanel products={products} rules={rules} deviceCountByProduct={deviceCountByProduct} onChanged={refresh} categories={categories} productCategoryRows={productCategoryRows} />
+        ? <ProductsPanel products={products} rules={rules} deviceCountByProduct={deviceCountByProduct} onChanged={refresh} categories={categories} productCategoryRows={productCategoryRows} addOns={addOns} productAddOnRows={productAddOnRows} />
         : <DevicesPanel products={products} devices={devices} onChanged={refresh} trackingProviderConnected={trackingProviderConnected} trackingByDevice={trackingByDevice} />}
     </div>
   )
@@ -87,13 +90,15 @@ export default function InventoryManager({
 
 // --- Products -----------------------------------------------------------------
 
-function ProductsPanel({ products, rules, deviceCountByProduct, onChanged, categories, productCategoryRows }: {
+function ProductsPanel({ products, rules, deviceCountByProduct, onChanged, categories, productCategoryRows, addOns, productAddOnRows }: {
   products: AdminProductView[]
   rules: AdminPricingRule[]
   deviceCountByProduct: Map<string, number>
   onChanged: () => void
   categories: AdminCategory[]
   productCategoryRows: { productId: string; categoryId: string }[]
+  addOns: AdminAddOn[]
+  productAddOnRows: { productId: string; addOnId: string }[]
 }) {
   const [editing, setEditing] = useState<AdminProductView | 'new' | null>(null)
   const [rulesFor, setRulesFor] = useState<string | null>(null)
@@ -104,7 +109,7 @@ function ProductsPanel({ products, rules, deviceCountByProduct, onChanged, categ
         <Plus size={15} /> New product
       </button>
 
-      {editing === 'new' && <ProductForm product={null} categories={categories} productCategoryRows={productCategoryRows} onDone={(ok) => { if (ok) { setEditing(null); onChanged() } }} />}
+      {editing === 'new' && <ProductForm product={null} categories={categories} productCategoryRows={productCategoryRows} addOns={addOns} initialAddOnIds={[]} onDone={(ok) => { if (ok) { setEditing(null); onChanged() } }} />}
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-[#173b3b]/10 bg-white">
         <table className="w-full min-w-[720px] text-left text-sm">
@@ -132,7 +137,7 @@ function ProductsPanel({ products, rules, deviceCountByProduct, onChanged, categ
       </div>
 
       {editing && editing !== 'new' && (
-        <ProductForm product={editing} categories={categories} productCategoryRows={productCategoryRows} onDone={(ok) => { if (ok) { setEditing(null); onChanged() } }} />
+        <ProductForm product={editing} categories={categories} productCategoryRows={productCategoryRows} addOns={addOns} initialAddOnIds={productAddOnRows.filter((r) => r.productId === editing.id).map((r) => r.addOnId)} onDone={(ok) => { if (ok) { setEditing(null); onChanged() } }} />
       )}
 
       {rulesFor && (
@@ -143,13 +148,14 @@ function ProductsPanel({ products, rules, deviceCountByProduct, onChanged, categ
 }
 
 
-function ProductForm({ product, categories, productCategoryRows, onDone }: { product: AdminProductView | null; categories: AdminCategory[]; productCategoryRows: { productId: string; categoryId: string }[]; onDone: (ok: boolean) => void }) {
+function ProductForm({ product, categories, productCategoryRows, addOns, initialAddOnIds, onDone }: { product: AdminProductView | null; categories: AdminCategory[]; productCategoryRows: { productId: string; categoryId: string }[]; addOns: AdminAddOn[]; initialAddOnIds: string[]; onDone: (ok: boolean) => void }) {
   const [name, setName] = useState(product?.name ?? '')
   const [slug, setSlug] = useState(product?.slug ?? '')
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? '')
   const [extraCats, setExtraCats] = useState<string[]>(
     product ? productCategoryRows.filter((r) => r.productId === product.id && r.categoryId !== product.categoryId).map((r) => r.categoryId) : [],
   )
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>(initialAddOnIds)
   const [newCatOpen, setNewCatOpen] = useState(false)
   const [newCatNameId, setNewCatNameId] = useState('')
   const [newCatNameEn, setNewCatNameEn] = useState('')
@@ -219,6 +225,7 @@ function ProductForm({ product, categories, productCategoryRows, onDone }: { pro
       slug,
       categoryId: finalCategoryId,
       additionalCategoryIds: extraCats,
+      addOnIds: selectedAddOns,
       description,
       depositCents: Math.round(Number(deposit) || 0),
       depositRequired,
@@ -266,6 +273,24 @@ function ProductForm({ product, categories, productCategoryRows, onDone }: { pro
               <label key={c.id} className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${extraCats.includes(c.id) ? 'border-[#173b3b] bg-[#173b3b] text-white' : 'border-[#173b3b]/15 bg-white text-[#173b3b]/70'}`}>
                 <input type="checkbox" checked={extraCats.includes(c.id)} onChange={() => setExtraCats((ids) => ids.includes(c.id) ? ids.filter((x) => x !== c.id) : [...ids, c.id])} className="h-3 w-3 accent-[#e76f51]" />
                 {c.nameEn}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="text-xs font-bold text-[#173b3b]/60 sm:col-span-2">Optional add-ons
+          <p className="mt-1 text-[11px] font-normal text-[#173b3b]/50">
+            Extras customers can tick on the product page. Create or edit add-ons under{' '}
+            <Link href="/admin/content/add-ons" className="text-[#387066] underline" target="_blank">Content → Add-ons</Link>.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {addOns.length === 0 && <p className="text-[11px] font-normal text-[#173b3b]/50">No active add-ons yet.</p>}
+            {addOns.map((a) => (
+              <label key={a.id} className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${selectedAddOns.includes(a.id) ? 'border-[#173b3b] bg-[#173b3b] text-white' : 'border-[#173b3b]/15 bg-white text-[#173b3b]/70'}`}>
+                <input type="checkbox" checked={selectedAddOns.includes(a.id)} onChange={() => setSelectedAddOns((ids) => ids.includes(a.id) ? ids.filter((x) => x !== a.id) : [...ids, a.id])} className="h-3 w-3 accent-[#e76f51]" />
+                {a.nameEn}
+                <span className={selectedAddOns.includes(a.id) ? 'opacity-80' : 'opacity-50'}>
+                  {a.centsPerDay > 0 ? `+Rp ${Math.round(a.centsPerDay / 100).toLocaleString('id-ID')}/day` : `+Rp ${Math.round(a.centsPerRental / 100).toLocaleString('id-ID')}/rental`}
+                </span>
               </label>
             ))}
           </div>
