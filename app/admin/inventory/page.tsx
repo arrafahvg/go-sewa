@@ -86,6 +86,7 @@ export default async function InventoryPage() {
       <div>
         <p className="text-xs font-bold uppercase tracking-wide text-[#173b3b]/45">
           <a href="/admin" className="hover:underline">Admin</a> / Inventory
+          <a href="/admin/labels" className="ml-3 rounded-full border border-[#173b3b]/15 bg-white px-3 py-1 text-xs font-bold hover:bg-[#e4eee8]">Print QR labels</a>
         </p>
         <InventoryManager products={products} rules={rules} devices={devices} trackingProviderConnected={trackingProviderConnected} tracking={tracking} categories={categories} productCategoryRows={productCategoryRows} addOns={addOns} productAddOnRows={productAddOnRows} />
       </div>
