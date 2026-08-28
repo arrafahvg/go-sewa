@@ -129,18 +129,18 @@ export async function seed(): Promise<void> {
   const ayu = await cust('Ayu Lestari', '+6281993344556')
 
   // --- Add-ons (§74: 8+ accessories) ------------------------------------------------
-  for (const [, nameId, nameEn, perDay] of [
-    ['card', 'Kartu memori', 'Memory card', 15000],
-    ['battery', 'Baterai ekstra', 'Extra battery', 10000],
-    ['tripod', 'Tripod', 'Tripod', 5000],
-    ['powerbank', 'Power bank', 'Power bank', 8000],
-    ['mic', 'Mikrofon wireless', 'Wireless microphone', 25000],
-    ['waterproof-case', 'Casing anti air', 'Waterproof case', 12000],
-    ['helmet-mount', 'Mount helm', 'Helmet mount', 7000],
-    ['selfie-stick', 'Tongsis', 'Selfie stick', 6000],
-    ['fast-charger', 'Charger cepat', 'Fast charger', 9000],
+  for (const [, nameId, nameEn, perDay, stockQty] of [
+    ['card', 'Kartu memori', 'Memory card', 15000, 4],
+    ['battery', 'Baterai ekstra', 'Extra battery', 10000, 3],
+    ['tripod', 'Tripod', 'Tripod', 5000, 2],
+    ['powerbank', 'Power bank', 'Power bank', 8000, 2],
+    ['mic', 'Mikrofon wireless', 'Wireless microphone', 25000, 2],
+    ['waterproof-case', 'Casing anti air', 'Waterproof case', 12000, 3],
+    ['helmet-mount', 'Mount helm', 'Helmet mount', 7000, 2],
+    ['selfie-stick', 'Tongsis', 'Selfie stick', 6000, 1],
+    ['fast-charger', 'Charger cepat', 'Fast charger', 9000, 2],
   ] as const) {
-    await db.insert(rentalAddOns).values({ id: uid(), nameId, nameEn, centsPerDay: perDay, centsPerRental: 0, active: true })
+    await db.insert(rentalAddOns).values({ id: uid(), nameId, nameEn, centsPerDay: perDay, centsPerRental: 0, stockQty, active: true })
   }
 
   // --- Maintenance (§74: 3+ records) + damage report ------------------------------

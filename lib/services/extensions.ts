@@ -1,9 +1,10 @@
 import { and, asc, desc, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
-  bookings, bookingItems, bookingExtensions, rentalPricingRules,
+  bookings, bookingItems, bookingExtensions, rentalPricingRules, bookingAddOns,
 } from '@/lib/db/schema'
 import { checkAvailability } from './availability'
+import { assertAddOnStock } from './addons'
 import { uid, logActivity } from './audit'
 
 /**
@@ -102,6 +103,18 @@ export async function extendBooking(
   let additionalCents = 0
   for (const [productId, qty] of qtyByProduct) {
     additionalCents += (await dailyRateCents(productId)) * extraDays * qty
+  }
+
+  // Add-on stock over the WIDENED window (§2C): tracked add-ons this booking
+  // took must still be free for the extra days — refused on shortage (§29).
+  const takenAddOns = await db
+    .select({ addOnId: bookingAddOns.addOnId, qty: bookingAddOns.quantity })
+    .from(bookingAddOns)
+    .where(eq(bookingAddOns.bookingId, booking.id))
+  const qtyByAddOn = new Map<string, number>()
+  for (const t of takenAddOns) qtyByAddOn.set(t.addOnId, (qtyByAddOn.get(t.addOnId) ?? 0) + t.qty)
+  for (const [addOnId, qty] of qtyByAddOn) {
+    await assertAddOnStock([addOnId], booking.endsAt, newEndsAt, qty, booking.id)
   }
 
   const id = uid()

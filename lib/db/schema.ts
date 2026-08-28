@@ -112,6 +112,8 @@ export const rentalAddOns = pgTable('rental_add_ons', {
   nameEn: text('name_en').notNull(),
   centsPerDay: integer('cents_per_day').notNull().default(0),
   centsPerRental: integer('cents_per_rental').notNull().default(0),
+  /** Physical stock held. NULL = untracked/unlimited (insurance, services). */
+  stockQty: integer('stock_qty'),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
@@ -120,6 +122,21 @@ export const productAddOns = pgTable('product_add_ons', {
   productId: text('product_id').notNull(),
   addOnId: text('add_on_id').notNull(),
 }, (t) => [index('pa_product_idx').on(t.productId)])
+
+/**
+ * Per-booking add-on reservations (§2C): which add-ons a booking actually took
+ * and how many units. This is the demand ledger that makes live add-on stock
+ * possible — mirroring booking_device_allocations for devices (§56).
+ */
+export const bookingAddOns = pgTable('booking_add_ons', {
+  id: text('id').primaryKey(),
+  bookingId: text('booking_id').notNull(),
+  addOnId: text('add_on_id').notNull(),
+  quantity: integer('quantity').notNull().default(1),
+}, (t) => [
+  index('booking_addon_booking_idx').on(t.bookingId),
+  index('booking_addon_addon_idx').on(t.addOnId),
+])
 
 // --- Physical devices ---------------------------------------------------------
 export const devices = pgTable('devices', {

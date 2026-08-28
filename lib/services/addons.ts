@@ -1,6 +1,7 @@
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, gt, inArray, lt } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { products, rentalAddOns, productAddOns } from '@/lib/db/schema'
+import { bookings, bookingAddOns, products, rentalAddOns, productAddOns } from '@/lib/db/schema'
+import { BLOCKING_BOOKING_STATUSES } from './availability'
 import { uid, logActivity } from './audit'
 
 /**
@@ -15,6 +16,8 @@ export type AddOnInput = {
   nameEn: string
   centsPerDay?: number
   centsPerRental?: number
+  /** Physical stock held; null = untracked/unlimited (insurance, services). */
+  stockQty?: number | null
   active?: boolean
 }
 
@@ -49,6 +52,7 @@ export async function createAddOn(input: AddOnInput, byUserId: string) {
     nameEn,
     centsPerDay: input.centsPerDay ?? 0,
     centsPerRental: input.centsPerRental ?? 0,
+    stockQty: input.stockQty ?? null,
     active: input.active ?? true,
   })
   await logActivity({
@@ -56,7 +60,7 @@ export async function createAddOn(input: AddOnInput, byUserId: string) {
     action: 'addon_created',
     entity: 'rental_add_ons',
     entityId: id,
-    metadata: { nameId, nameEn, centsPerDay: input.centsPerDay ?? 0, centsPerRental: input.centsPerRental ?? 0 },
+    metadata: { nameId, nameEn, centsPerDay: input.centsPerDay ?? 0, centsPerRental: input.centsPerRental ?? 0, stockQty: input.stockQty ?? null },
   })
   return { id }
 }
@@ -75,6 +79,7 @@ export async function updateAddOn(
     ...(patch.nameEn !== undefined ? { nameEn: patch.nameEn.trim() } : {}),
     ...(patch.centsPerDay !== undefined ? { centsPerDay: patch.centsPerDay } : {}),
     ...(patch.centsPerRental !== undefined ? { centsPerRental: patch.centsPerRental } : {}),
+    ...(patch.stockQty !== undefined ? { stockQty: patch.stockQty } : {}),
     ...(patch.active !== undefined ? { active: patch.active } : {}),
   }).where(eq(rentalAddOns.id, id))
   await logActivity({
@@ -153,6 +158,69 @@ export async function setAddOnProducts(addOnId: string, productIds: string[], by
     entityId: addOnId,
     metadata: { attached: ids.length, added: toAdd.length, removed: toRemove.length },
   })
+}
+
+/**
+ * Live add-on availability for a date range (§2C): tracked stock minus demand
+ * from blocking-status bookings overlapping the window. NULL stock = unlimited.
+ * Freed automatically once a booking's window passes — no manual restocking.
+ */
+export async function getAddOnAvailability(
+  addOnId: string,
+  startsAt: Date,
+  endsAt: Date,
+  excludeBookingId?: string,
+): Promise<{ stock: number | null; booked: number; available: number | null }> {
+  const rows = await db.select().from(rentalAddOns).where(eq(rentalAddOns.id, addOnId)).limit(1)
+  const addOn = rows[0]
+  if (!addOn) return { stock: 0, booked: 0, available: 0 }
+  if (addOn.stockQty == null) return { stock: 0, booked: 0, available: null }
+
+  const overlapping = await db.select({ id: bookings.id }).from(bookings).where(
+    and(lt(bookings.startsAt, endsAt), gt(bookings.endsAt, startsAt)),
+  )
+  const bookingIds = overlapping.map((b) => b.id)
+  let booked = 0
+  if (bookingIds.length > 0) {
+    const demand = await db
+      .select({ qty: bookingAddOns.quantity, bookingId: bookingAddOns.bookingId })
+      .from(bookingAddOns)
+      .where(and(eq(bookingAddOns.addOnId, addOnId), inArray(bookingAddOns.bookingId, bookingIds)))
+    for (const d of demand) {
+      if (excludeBookingId && d.bookingId === excludeBookingId) continue
+      booked += d.qty
+    }
+  }
+  return { stock: addOn.stockQty, booked, available: Math.max(0, addOn.stockQty - booked) }
+}
+
+/**
+ * Validate that every tracked add-on in `addOnIds` has enough live stock for
+ * `quantity` units over the window. Throws with the §70 customer-safe message
+ * on shortage — never silently overbooks.
+ */
+export async function assertAddOnStock(
+  addOnIds: string[],
+  startsAt: Date,
+  endsAt: Date,
+  quantity: number,
+  excludeBookingId?: string,
+): Promise<void> {
+  if (addOnIds.length === 0) return
+  const rows = await db.select().from(rentalAddOns).where(inArray(rentalAddOns.id, addOnIds))
+  for (const addOn of rows) {
+    if (addOn.stockQty == null) continue
+    const availability = await getAddOnAvailability(addOn.id, startsAt, endsAt, excludeBookingId)
+    const need = quantity
+    if ((availability.available ?? 0) < need) {
+      const left = availability.available ?? 0
+      throw new Error(
+        left <= 0
+          ? `${addOn.nameEn} is no longer available for your selected dates. Please remove it or choose different dates.`
+          : `Only ${left} left for your selected dates — ${addOn.nameEn}.`,
+      )
+    }
+  }
 }
 
 /** Replace the set of add-ons attached to a product (replace-all semantics). */

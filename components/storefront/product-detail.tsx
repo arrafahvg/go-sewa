@@ -17,6 +17,7 @@ export default function ProductDetail({ product, addOns, categoryLabel, whatsapp
   const [end, setEnd] = useState(addDaysStr(3))
   const [quantity, setQuantity] = useState(1)
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([])
+  const [addOnAvailability, setAddOnAvailability] = useState<Record<string, number | null>>({})
   const [activeImage, setActiveImage] = useState(0)
   const [state, setState] = useState<{ phase: 'idle' | 'loading' | 'ok' | 'error'; message?: string; available?: number; total?: number; quote?: any }>({ phase: 'idle' })
 
@@ -24,11 +25,20 @@ export default function ProductDetail({ product, addOns, categoryLabel, whatsapp
     let cancelled = false
     const timer = window.setTimeout(async () => {
       try {
-        const res = await checkProductAvailability({ productId: product.id, startsAt: start, endsAt: end, quantity, addOnIds: selectedAddOns, deliveryFeeCents: 0 })
+        const res = await checkProductAvailability({
+          productId: product.id,
+          startsAt: start,
+          endsAt: end,
+          quantity,
+          addOnIds: selectedAddOns,
+          allAddOnIds: addOns.map((a) => a.id),
+          deliveryFeeCents: 0,
+        })
         if (cancelled) return
         if (res.error) setState({ phase: 'error', message: res.error })
         else if (res.availability?.unavailable) setState({ phase: 'error', message: dict.detail.notAvailable })
         else if (res.availability && res.quote) setState({ phase: 'ok', available: res.availability.available, total: res.availability.total, quote: res.quote })
+        if (res.addOnAvailability) setAddOnAvailability(res.addOnAvailability)
       } catch {
         if (!cancelled) setState({ phase: 'error', message: dict.detail.unableToCheck })
       }
@@ -151,11 +161,25 @@ export default function ProductDetail({ product, addOns, categoryLabel, whatsapp
             <div>
               <p className="text-xs font-bold text-[#173b3b]/55">{dict.detail.addOnsTitle}</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {addOns.map((a) => (
-                  <button key={a.id} onClick={() => toggleAddOn(a.id)} aria-pressed={selectedAddOns.includes(a.id)} className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${selectedAddOns.includes(a.id) ? 'border-[#173b3b] bg-[#173b3b] text-white' : 'border-[#173b3b]/15 bg-white text-[#173b3b]/70'}`}>
-                    {a.nameEn} · {formatMoney(a.centsPerDay)}{dict.detail.perDayShort}
-                  </button>
-                ))}
+                {addOns.map((a) => {
+                  const avail = addOnAvailability[a.id]
+                  const soldOut = avail != null && avail <= 0
+                  const low = avail != null && avail <= 2
+                  const selected = selectedAddOns.includes(a.id)
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => toggleAddOn(a.id)}
+                      aria-pressed={selected}
+                      disabled={soldOut}
+                      className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${selected ? 'border-[#173b3b] bg-[#173b3b] text-white' : soldOut ? 'cursor-not-allowed border-[#173b3b]/10 bg-[#f1eee7] text-[#173b3b]/35' : low ? 'border-[#e7b54a] bg-[#fdf5e0] text-[#7a6a2a]' : 'border-[#173b3b]/15 bg-white text-[#173b3b]/70'}`}
+                    >
+                      {a.nameEn} · {formatMoney(a.centsPerDay)}{dict.detail.perDayShort}
+                      {soldOut && <span className="ml-1.5 font-normal">({dict.detail.addOnNotAvailable})</span>}
+                      {!soldOut && low && <span className="ml-1.5 font-normal">({dict.detail.addOnLow.replace('{count}', String(avail))})</span>}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}

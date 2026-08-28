@@ -18,6 +18,10 @@ type AddOnRow = {
   nameEn: string
   centsPerDay: number
   centsPerRental: number
+  /** Physical stock held; null = untracked/unlimited (insurance, services). */
+  stockQty: number | null
+  /** Live available right now (stock − current demand); null = unlimited. */
+  liveAvailable: number | null
   active: boolean
   productCount: number
 }
@@ -40,8 +44,10 @@ export default function AddOnManager({ addOns, products, attachRows }: { addOns:
   const [newNameEn, setNewNameEn] = useState('')
   const [newPriceMode, setNewPriceMode] = useState<'per_day' | 'per_rental'>('per_day')
   const [newRupiah, setNewRupiah] = useState('')
+  const [newStockMode, setNewStockMode] = useState<'unlimited' | 'tracked'>('unlimited')
+  const [newStockQty, setNewStockQty] = useState('')
   // Draft edits for the row being edited.
-  const [draft, setDraft] = useState<{ nameId: string; nameEn: string; centsPerDay: number; centsPerRental: number; active: boolean } | null>(null)
+  const [draft, setDraft] = useState<{ nameId: string; nameEn: string; centsPerDay: number; centsPerRental: number; stockQty: number | null; active: boolean } | null>(null)
   // Attached-products editor state (add-on side): which row is open + its draft selection.
   const [attachOpenId, setAttachOpenId] = useState<string | null>(null)
   const [attachDraft, setAttachDraft] = useState<string[]>([])
@@ -66,15 +72,16 @@ export default function AddOnManager({ addOns, products, attachRows }: { addOns:
         nameId: newNameId,
         nameEn: newNameEn,
         ...(newPriceMode === 'per_day' ? { centsPerDay: cents } : { centsPerRental: cents }),
+        ...(newStockMode === 'tracked' ? { stockQty: Math.max(0, parseInt(newStockQty, 10) || 0) } : {}),
       }),
       'Add-on created.',
     )
-    if (ok) { setNewNameId(''); setNewNameEn(''); setNewRupiah(''); setNewPriceMode('per_day') }
+    if (ok) { setNewNameId(''); setNewNameEn(''); setNewRupiah(''); setNewPriceMode('per_day'); setNewStockMode('unlimited'); setNewStockQty('') }
   }
 
   function startEdit(row: AddOnRow) {
     setEditingId(row.id)
-    setDraft({ nameId: row.nameId, nameEn: row.nameEn, centsPerDay: row.centsPerDay, centsPerRental: row.centsPerRental, active: row.active })
+    setDraft({ nameId: row.nameId, nameEn: row.nameEn, centsPerDay: row.centsPerDay, centsPerRental: row.centsPerRental, stockQty: row.stockQty, active: row.active })
     setSuccess(''); setError('')
   }
 
@@ -86,6 +93,7 @@ export default function AddOnManager({ addOns, products, attachRows }: { addOns:
         nameEn: draft.nameEn,
         centsPerDay: draft.centsPerDay,
         centsPerRental: draft.centsPerRental,
+        stockQty: draft.stockQty,
         active: draft.active,
       }),
       'Add-on updated.',
@@ -142,6 +150,15 @@ export default function AddOnManager({ addOns, products, attachRows }: { addOns:
           <label className="block text-xs font-bold text-[#173b3b]/60">Price (Rp)
             <input value={newRupiah} onChange={(e) => setNewRupiah(e.target.value)} inputMode="numeric" className={inputCls} placeholder="e.g. 25000" />
           </label>
+          <label className="block text-xs font-bold text-[#173b3b]/60">Stock
+            <select value={newStockMode} onChange={(e) => setNewStockMode(e.target.value as 'unlimited' | 'tracked')} className={inputCls}>
+              <option value="unlimited">Unlimited</option>
+              <option value="tracked">Limited stock</option>
+            </select>
+          </label>
+          <label className="block text-xs font-bold text-[#173b3b]/60">{newStockMode === 'tracked' ? 'Units in stock' : '—'}
+            <input value={newStockMode === 'tracked' ? newStockQty : ''} onChange={(e) => setNewStockQty(e.target.value)} inputMode="numeric" disabled={newStockMode !== 'tracked'} className={inputCls} placeholder="e.g. 2" />
+          </label>
           <div className="flex items-end">
             <button disabled={busyId === 'form'} className="flex w-full items-center justify-center gap-2 rounded-full bg-[#173b3b] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60">
               {busyId === 'form' && <Loader2 size={15} className="animate-spin" />} Create add-on
@@ -166,6 +183,7 @@ export default function AddOnManager({ addOns, products, attachRows }: { addOns:
               <th className="px-4 py-3 font-bold">Add-on (ID / EN)</th>
               <th className="px-4 py-3 font-bold">Per day</th>
               <th className="px-4 py-3 font-bold">Per rental</th>
+              <th className="px-4 py-3 font-bold">Stock / Live</th>
               <th className="px-4 py-3 font-bold">Attached products</th>
               <th className="px-4 py-3 font-bold">Storefront</th>
               <th className="px-4 py-3 text-right font-bold">Actions</th>
@@ -173,11 +191,11 @@ export default function AddOnManager({ addOns, products, attachRows }: { addOns:
           </thead>
           <tbody>
             {addOns.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#173b3b]/50">No add-ons yet — create your first one above.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-[#173b3b]/50">No add-ons yet — create your first one above.</td></tr>
             )}
             {addOns.map((row) => editingId === row.id && draft ? (
               <tr key={row.id} className="border-b border-[#173b3b]/8 bg-[#faf8f2]">
-                <td className="px-4 py-3" colSpan={6}>
+                <td className="px-4 py-3" colSpan={7}>
                   <div className="grid gap-3 sm:grid-cols-5">
                     <label className="block text-xs font-bold text-[#173b3b]/60">Indonesian
                       <input value={draft.nameId} onChange={(e) => setDraft({ ...draft, nameId: e.target.value })} className={inputCls} />
@@ -190,6 +208,9 @@ export default function AddOnManager({ addOns, products, attachRows }: { addOns:
                     </label>
                     <label className="block text-xs font-bold text-[#173b3b]/60">Per rental (Rupiah)
                       <input type="number" min={0} value={Math.round(draft.centsPerRental / 100)} onChange={(e) => setDraft({ ...draft, centsPerRental: Math.round((Number(e.target.value) || 0) * 100) })} className={inputCls} />
+                    </label>
+                    <label className="block text-xs font-bold text-[#173b3b]/60">Stock (blank = unlimited)
+                      <input type="number" min={0} value={draft.stockQty ?? ''} onChange={(e) => setDraft({ ...draft, stockQty: e.target.value === '' ? null : Math.max(0, Number(e.target.value) || 0) })} className={inputCls} placeholder="Unlimited" />
                     </label>
                     <label className="block text-xs font-bold text-[#173b3b]/60">Storefront
                       <select value={draft.active ? 'active' : 'inactive'} onChange={(e) => setDraft({ ...draft, active: e.target.value === 'active' })} className={inputCls}>
@@ -216,6 +237,15 @@ export default function AddOnManager({ addOns, products, attachRows }: { addOns:
                 </td>
                 <td className="px-4 py-3">{formatMoney(row.centsPerDay)}</td>
                 <td className="px-4 py-3">{formatMoney(row.centsPerRental)}</td>
+                <td className="px-4 py-3">
+                  {row.stockQty == null ? (
+                    <span className="text-xs text-[#173b3b]/50">Unlimited</span>
+                  ) : (
+                    <span className={`text-xs font-bold ${(row.liveAvailable ?? 0) > 0 ? 'text-[#27604a]' : 'text-[#a43d2b]'}`}>
+                      {row.stockQty} held · {row.liveAvailable} free
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <button
                     type="button"
@@ -258,7 +288,7 @@ export default function AddOnManager({ addOns, products, attachRows }: { addOns:
 
               {attachOpenId === row.id && (
                 <tr className="border-b border-[#173b3b]/8 bg-[#faf8f2]">
-                  <td colSpan={6} className="px-4 py-4">
+                  <td colSpan={7} className="px-4 py-4">
                     <p className="text-xs font-bold text-[#173b3b]/70">
                       Products offering “{row.nameEn}”
                       {attachDraft.length > 0 && (
@@ -298,4 +328,5 @@ export default function AddOnManager({ addOns, products, attachRows }: { addOns:
     </div>
   )
 }
+
 

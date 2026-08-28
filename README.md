@@ -258,11 +258,17 @@ a product's price later never mutates historical rentals.
   and a structured spec table from `products.specs`.
 - Optional add-ons (§2C) are fully admin-manageable at `/admin/content/add-ons`
   (sidebar: Catalog → Add-ons): bilingual names, per-day or one-off per-rental
-  pricing in Rupiah, Active/Inactive storefront visibility, safe delete while
-  unused, per-product attachment via Inventory → Edit product → Optional
-  add-ons, **and an add-on-side "Attached products" editor** (click the product
-  count on any add-on row to multi-select which products offer it — diffed so
-  other add-ons are untouched). All writes are staff-gated and audit-logged
+  pricing in Rupiah, **optional tracked stock** (blank = unlimited, like
+  insurance/services), a live **"N held · M free"** availability readout, an
+  Active/Inactive storefront dropdown, safe delete while unused, per-product
+  attachment via Inventory → Edit product → Optional add-ons, **and an add-on-side
+  "Attached products" editor** (click the product count on any add-on row to
+  multi-select which products offer it — diffed so other add-ons are untouched).
+  **Stock is live** (spec §2C/§70): tracked add-ons are reserved per booking via
+  the new `booking_add_ons` ledger (migration `0011`), enforced server-side on
+  every booking channel and on rental extensions, and shown honestly on the
+  product page (disabled + "not available for your dates" when sold out, "Only X
+  left" when low). All writes are staff-gated and audit-logged
   (`lib/services/addons.ts`).
 - CMS (§42) is live in two admin screens:
   - `/admin/settings` — company profile (business name, **managed logo upload** to

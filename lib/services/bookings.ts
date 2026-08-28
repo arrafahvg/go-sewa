@@ -1,5 +1,6 @@
 import { pool } from '@/lib/db'
 import { quoteBooking } from './pricing'
+import { assertAddOnStock } from './addons'
 import { logActivity, uid } from './audit'
 
 export type BookingChannel = 'online' | 'in_store' | 'phone' | 'whatsapp'
@@ -92,6 +93,13 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     itemQuotes.push(await quoteBooking(it.productId, start, end, {
       quantity: it.quantity, addOnIds: it.addOnIds, deliveryFeeCents: 0, discountCents: 0,
     }))
+  }
+
+  // Add-on stock validation (§2C): tracked add-ons must have enough live stock
+  // over the window — refused with the §70 customer-safe message, all channels.
+  for (const it of resolvedItems) {
+    if (it.addOnIds.length === 0) continue
+    await assertAddOnStock(it.addOnIds, start, end, it.quantity)
   }
   const rentalSubtotalCents = itemQuotes.reduce((s, q) => s + q.rentalSubtotalCents, 0)
   const depositTotalCents = itemQuotes.reduce((s, q) => s + q.depositCents, 0)
@@ -250,6 +258,13 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
         [uid(), bookingId, item.productId, item.quantity, q.unitPriceCents,
           q.ruleKind, q.ruleLabel, q.addOnCents, q.lineTotalCents, q.productName],
       )
+      // Demand ledger for tracked add-ons (§2C live stock) — inside the txn.
+      for (const addOnId of [...new Set((item.addOnIds ?? []).filter(Boolean))]) {
+        await client.query(
+          `INSERT INTO booking_add_ons (id, booking_id, add_on_id, quantity) VALUES ($1,$2,$3,$4)`,
+          [uid(), bookingId, addOnId, item.quantity],
+        )
+      }
     }
 
     // Reserve every chosen physical device (spec §22) — reserved + allocation tracked.

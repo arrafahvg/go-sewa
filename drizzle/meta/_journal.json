@@ -78,6 +78,13 @@
       "when": 1787712634497,
       "tag": "0010_rapid_exiles",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787884910888,
+      "tag": "0011_steady_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

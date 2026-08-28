@@ -125,7 +125,7 @@ npm run build        # production build (must pass before finishing)
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 1 | Foundation: schema, auth, settings | ✅ done — incl. RBAC §54. Auth is staff-only: customers book without an account; public sign-up removed; first run offers a one-time owner bootstrap at `/sign-in`; staff see an Admin chip on the storefront while signed in |
-| 2 | Products + physical devices + pricing rules | ✅ done — schema/services + admin CRUD UI live at `/admin/inventory` (products with category picker, devices, per-product pricing rules with snapshots §58); add-on manager at `/admin/content/add-ons` (bilingual names, per-day/per-rental pricing, Active/Inactive, safe delete, product attachment picker, add-on-side "Attached products" multi-select editor) and an "Optional add-ons" picker in the product form); category manager at `/admin/content/categories` (ID/EN names, sort order, show-in-navbar flag §43, safe delete, assign-existing-products on creation, explicit navbar/storefront dropdowns); product form supports inline category creation; devices table has a per-row Edit dialog (identity/condition/Active) via device-editor; products support multiple categories (primary `category_id` + `product_categories` many-to-many, migration `0010`) |
+| 2 | Products + physical devices + pricing rules | ✅ done — schema/services + admin CRUD UI live at `/admin/inventory` (products with category picker, devices, per-product pricing rules with snapshots §58); add-on manager at `/admin/content/add-ons` (bilingual names, per-day/per-rental pricing, Active/Inactive, safe delete, product attachment picker, add-on-side "Attached products" multi-select editor) and an "Optional add-ons" picker in the product form); add-on live stock (optional stock_qty, per-booking `booking_add_ons` ledger, enforced on checkout + extensions, honest storefront caps, migration `0011`); category manager at `/admin/content/categories` (ID/EN names, sort order, show-in-navbar flag §43, safe delete, assign-existing-products on creation, explicit navbar/storefront dropdowns); product form supports inline category creation; devices table has a per-row Edit dialog (identity/condition/Active) via device-editor; products support multiple categories (primary `category_id` + `product_categories` many-to-many, migration `0010`) |
 | 3 | Availability engine + conflict prevention | ✅ done |
 | 4 | Storefront: home / rent / detail / cart | ✅ done — search/filter/sort (§10/§44/§45) live on `/rent` (debounced search, category + price-band + deposit filters, sort); gallery + specs display (§11) live on `/rent/[slug]` |
 | 5 | Checkout + confirmation + WhatsApp | ✅ done — multi-line cart checkout, confirmation, WhatsApp, delivery fields (§15), admin-reviewed pricing/delivery-fee adjustment before confirmation with staff notifications (§15) |
@@ -159,6 +159,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
 
 
 

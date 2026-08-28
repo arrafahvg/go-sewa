@@ -84,6 +84,8 @@ const en = {
     decreaseQty: 'Decrease quantity',
     increaseQty: 'Increase quantity',
     addOnsTitle: 'Optional add-ons',
+    addOnNotAvailable: 'not available',
+    addOnLow: '{count} left',
     perDayShort: '/day',
     rentalFee: 'Rental fee ({days}d × {qty})',
     deposit: 'Deposit',
@@ -251,6 +253,8 @@ const id: Dictionary = {
     decreaseQty: 'Kurangi jumlah',
     increaseQty: 'Tambah jumlah',
     addOnsTitle: 'Tambahan opsional',
+    addOnNotAvailable: 'tidak tersedia',
+    addOnLow: 'sisa {count}',
     perDayShort: '/hari',
     rentalFee: 'Biaya sewa ({days}h × {qty})',
     deposit: 'Jaminan',
@@ -346,4 +350,5 @@ const id: Dictionary = {
 
 const dictionaries: Record<Locale, Dictionary> = { en, id }
 export default dictionaries
+
 

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import AddOnManager from '@/components/admin/addon-manager'
 import { getCurrentUser } from '@/lib/services/auth'
-import { listAddOns } from '@/lib/services/addons'
+import { listAddOns, getAddOnAvailability } from '@/lib/services/addons'
 import { listProducts } from '@/lib/services/inventory'
 import { db } from '@/lib/db'
 import { productAddOns } from '@/lib/db/schema'
@@ -27,6 +27,15 @@ export default async function AddOnsPage() {
   const counts = new Map<string, number>()
   for (const r of attachRows) counts.set(r.addOnId, (counts.get(r.addOnId) ?? 0) + 1)
 
+  // Live availability snapshot: tracked stock minus demand over the next 24h.
+  const now = new Date()
+  const in24h = new Date(now.getTime() + 86_400_000)
+  const liveAvailability = new Map<string, number | null>()
+  for (const a of addOns) {
+    const availability = await getAddOnAvailability(a.id, now, in24h)
+    liveAvailability.set(a.id, availability.available)
+  }
+
   return (
     <div className="min-h-screen bg-[#f4f1ea] text-[#173b3b]">
       <div className="px-4 py-8 sm:px-6 xl:px-10">
@@ -48,6 +57,8 @@ export default async function AddOnsPage() {
               nameEn: a.nameEn,
               centsPerDay: a.centsPerDay,
               centsPerRental: a.centsPerRental,
+              stockQty: a.stockQty,
+              liveAvailable: liveAvailability.get(a.id) ?? null,
               active: a.active,
               productCount: counts.get(a.id) ?? 0,
             }))}
